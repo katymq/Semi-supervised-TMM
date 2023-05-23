@@ -3,6 +3,28 @@ import torch.nn as nn
 import numpy as np
 import os
 alpha = 0.1
+beta = 0.1
+
+def img_save(im, val = 1.001):
+    n, m = im.shape
+    img = im.copy()
+    img[n-1,m-1] = val
+    return img
+
+def model_reconstruction(model,epoch_model, path_save, device, print_loss =True):
+    print('Actual  path for to initialize our models: ', path_save)
+    path = os.path.join(path_save, model.__class__.__name__.casefold()+'_state_'+str(epoch_model)+'.pth') 
+    if device == 'cpu':
+        checkpoint = torch.load(path, map_location=torch.device('cpu'))
+    else:
+        checkpoint = torch.load(path)
+    print(f'Initialization of the {model.__class__.__name__} model  at epoch {epoch_model}')
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+    if print_loss:
+        print('loss: ',{checkpoint['loss']}, 'and epoch: ', {checkpoint['epoch']})
+    return model
+
 def num_param(model): return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def plot_loss_epoch(model, path_save,data, epoch_model):
@@ -16,6 +38,7 @@ def plot_loss_epoch(model, path_save,data, epoch_model):
     plt.savefig(os.path.join(path_save, data + '_loss_' + str(epoch_model) +'.png'))
     plt.show()
     plt.close()
+    return train_LOSS
 
 def run_model_seq(x, y,model,optimizer,clip, path_save_model, n_epochs,save_every=5, print_every=1, epoch_init=1):
     train_LOSS = []
@@ -28,6 +51,11 @@ def run_model_seq(x, y,model,optimizer,clip, path_save_model, n_epochs,save_ever
             loss_l = kld_loss_l + rec_loss_l + y_loss_l
             loss_u = kld_loss_u + rec_loss_u + y_loss_u        
             loss = loss_l + loss_u
+        if  model.__class__.__name__.casefold() == 'vsl':
+            kld_loss_u, rec_loss_u, y_loss_l = model(x,y)
+            loss_l = y_loss_l
+            loss_u = kld_loss_u + rec_loss_u        
+            loss = loss_l + beta*loss_u
         else:
             # 'svrnn_2' "tmm"
             kld_loss_l, rec_loss_l, y_loss_l, kld_loss_u, rec_loss_u, y_loss_u, add_term= model(x,y)

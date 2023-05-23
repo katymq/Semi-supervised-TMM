@@ -6,64 +6,50 @@ import torch.nn.functional as F
 from torch.distributions.bernoulli import Bernoulli
 import math
 from torch.autograd import Variable
+
 EPS = torch.finfo(torch.float).eps 
 c = - 0.5 * math.log(2*math.pi)
 
 class TMM_3(nn.Module):
     '''
-    This class implements the model described in the paper
-    Inputs:
-        x_dim: dimension of the input (a pixel in this case)
-        z_dim: dimension of the latent variable 
-        h_dim: dimension of the hidden state
-        y_dim: dimension of the label input  (a pixel in this case)
-        num_neurons: number of neurons in the hidden layer
+    TMM as the review article (Yohan and Hugo) + add term of SVRNN for labeled data
     '''
-    def __init__(self, x_dim, z_dim, h_dim, y_dim, num_neurons, device, bias = False):
-        super(TMM_3, self).__init__()
+    def __init__(self, x_dim, z_dim, y_dim, h_dim, num_neurons,device, add_loss = True, bias = False):
+        super(TMM_3,self).__init__()
         self.x_dim = x_dim
         self.z_dim = z_dim
-        self.h_dim = h_dim
         self.device = device
         self.y_dim = y_dim
+        self.h_dim = h_dim
+        self.add_loss = add_loss
         self.num_neurons = num_neurons
         self.Soft_threshold = nn.Sigmoid()
-
-        # Prior p(z_t | y_t, h_{t-1}) = N (μt, σt)
-        self.prior_z = nn.Sequential( nn.Linear(self.h_dim + self.y_dim, self.num_neurons),
+        # Prior p(z_t | z_{t-1}) = N (μt, σt)
+        self.prior_z = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons),
                                   nn.ReLU())
-        
         self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
         
         self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
                                     nn.Softplus())
-        
-        # Prior p(y_t | h_{t-1}) = Cat (θt) 
-        # In this case, we use a linear layer to predict the logits of the categorical distribution
-        # We will use the sigmoid function to ensure that the logits are positive and only two classes
-        # it means a Bernoulli distribution.
-        self.prior_y = nn.Sequential( nn.Linear(self.h_dim, self.num_neurons ),
+        # Prior p(y_t | y_{t-1}) = Cat (θt) 
+        # We will use the sigmoid function to ensure that the logits are positive and only two classes(if not we can use the softmax function)
+        self.prior_y = nn.Sequential( nn.Linear(self.y_dim, self.num_neurons ),
                                 nn.ReLU(),
                                 nn.Linear(self.num_neurons , self.num_neurons ),
                                 nn.ReLU())
-        
         self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.num_neurons ),
                                       nn.ReLU(),
                                       nn.Linear(self.num_neurons, self.y_dim),
                                       nn.Sigmoid())
-        
         # q(y_t | x_t, h_{t-1}) = Cat (θt)
         self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons),
                                 nn.ReLU(),
                                 nn.Linear(self.num_neurons , self.num_neurons),
                                 nn.ReLU())
-        
         self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.num_neurons),
                                       nn.ReLU(),
                                       nn.Linear(self.num_neurons, self.y_dim),
                                       nn.Sigmoid())
-
-        
         # Encoder
         # q(z_t | x_t, y_t, h_{t-1}) = N (μt, σt)
         self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons),
@@ -74,87 +60,144 @@ class TMM_3(nn.Module):
         self.enc_mean = nn.Linear(self.num_neurons, self.z_dim)
         self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
                                     nn.Softplus())
-        
         # Decoder
-        # p(x_t | z_t, y_t, h_{t-1}) = N (μt, σt)
-        self.dec = nn.Sequential( nn.Linear(self.h_dim + self.z_dim + self.y_dim, self.num_neurons),
+        # p(x_t |z_t, y_t) = N (μt, σt)
+        self.dec = nn.Sequential( nn.Linear(self.y_dim + self.z_dim , self.num_neurons),
                                 nn.ReLU(),
                                 nn.Linear(self.num_neurons, self.num_neurons),
                                 nn.ReLU())
-        
         self.dec_mean = nn.Linear(self.num_neurons, self.x_dim)
         self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim), 
                                     nn.Softplus())
         # Recurrence
-        # Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
         self.rnn = nn.RNNCell( self.x_dim + self.z_dim + self.y_dim, self.h_dim, bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
 
-
     def encoder(self, x, y, h):
-        enc = self.enc(torch.cat([x, y, h], 0))
+        enc = self.enc(torch.cat([x, y,h], 0))
         enc_mean = self.enc_mean(enc)
         enc_std = self.enc_std(enc)
         return enc_mean, enc_std
     
-    def decoder(self, z, y, h):
-        dec = self.dec(torch.cat([z, y, h], 0))
+    def decoder(self, z, y):
+        dec = self.dec(torch.cat([z, y], 0))
         dec_mean = self.dec_mean(dec)
         dec_std = self.dec_std(dec)
         return dec_mean, dec_std
     
-    def get_cost_labeled(self, x, y, h):
-        # Prior p(z_t | y_t, h_{t-1})
-        prior_zt = self.prior_z(torch.cat([y, h], 0))
+    def get_cost_labeled(self, x, y, h, zt):
+        # zt : z_{t-1}
+        prior_zt = self.prior_z(zt)
         prior_zt_mean = self.prior_z_mean(prior_zt)
         prior_zt_std = self.prior_z_std(prior_zt)
-        # Encoder q(z_t | x_t, y_t, h_{t-1})
+        # Encoder 
         enc_mean, enc_std = self.encoder(x, y, h)
         z_t = self._reparameterized_sample(enc_mean, enc_std)
-        # Decoder p(x_t | z_t, y_t, h_{t-1})
-        dec_mean, dec_std = self.decoder(z_t, y, h)
+        # Decoder 
+        dec_mean, dec_std = self.decoder(z_t, y)
         # Loss
         kld_loss_l = self._kld_gauss(enc_mean, enc_std, prior_zt_mean, prior_zt_std)
         rec_loss_l = self._rec_gauss(x, dec_mean, dec_std)
-        
         return kld_loss_l, rec_loss_l, z_t
-
-        
-    def forward(self, x, y):
+    
+    def sample(self, x):
+        '''
+        Complete image
+        '''
         h_t = torch.zeros(self.h_dim).to(self.device)
-        kld_loss_l = 0
-        rec_loss_l = 0
-        y_loss_l = 0
-
-        kld_loss_u = 0
-        rec_loss_u = 0
-        y_loss_u = 0
+        y_t = torch.zeros(self.y_dim).to(self.device)
+        yt = torch.zeros(self.y_dim).to(self.device) #t-1
+        y_complete = torch.zeros(x.size(0)).to(self.device)
+        zt = torch.zeros(self.z_dim).to(self.device)
         for t in range(x.size(0)):
-            # Prior p(y_t | h_{t-1})
-            p_yt = self.prior_y_proba(self.prior_y(h_t))
+            y_complete[t] = y_t.item() 
+            prior_zt = self.prior_z(zt)
+            prior_zt_mean = self.prior_z_mean(prior_zt)
+            prior_zt_std = self.prior_z_std(prior_zt)
+            z_t = self._reparameterized_sample(prior_zt_mean, prior_zt_std)
+            p_yt = self.prior_y_proba(self.prior_y(yt))
+            l_x_t = Bernoulli(p_yt)
+            y_t = l_x_t.sample() 
+
+            enc_mean, enc_std = self.encoder(x[t],y_t,h_t)
             if y[t] != -1:
                 y_t =  y[t].clone()
-                kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t], y_t, h_t)
+                enc_mean, enc_std = self.encoder(x[t],y_t,h_t)
+                z_t = self._reparameterized_sample(enc_mean, enc_std)
+                
+            else:
+                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t ], 0)))
+                l_x_t = Bernoulli(q_yt)
+                y_t = l_x_t.sample() 
+
+                y_complete[t] = y_t.item() 
+                enc_mean, enc_std = self.encoder(x[t],y_t,h_t)
+                z_t = self._reparameterized_sample(enc_mean, enc_std)
+
+            h_t = self.rnn(torch.cat([y_t, z_t, x[t]], 0)[None, :], h_t[None, :]).squeeze(0)
+            
+        return y_complete
+    
+    def reconstruction(self, x, y):
+        '''
+        Complete image
+        '''
+        h_t = torch.zeros(self.h_dim).to(self.device)
+        y_complete = y.clone()
+        for t in range(x.size(0)):
+            if y[t] != -1:
+                y_t =  y[t].clone()
+                enc_mean, enc_std = self.encoder(x[t],y_t,h_t)
+                z_t = self._reparameterized_sample(enc_mean, enc_std)
+                
+            else:
+                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t ], 0)))
+                l_x_t = Bernoulli(q_yt)
+                y_t = l_x_t.sample() 
+
+                y_complete[t] = y_t.item() 
+                enc_mean, enc_std = self.encoder(x[t],y_t,h_t)
+                z_t = self._reparameterized_sample(enc_mean, enc_std)
+
+            h_t = self.rnn(torch.cat([y_t, z_t, x[t]], 0)[None, :], h_t[None, :]).squeeze(0)
+            
+        return y_complete
+
+    def forward(self, x, y):
+        zt = torch.zeros(self.z_dim).to(self.device)
+        yt = torch.zeros(self.y_dim).to(self.device)
+        h_t = torch.zeros(self.h_dim).to(self.device)
+        kld_loss_l, rec_loss_l, y_loss_l, add_term =  4*[0]
+        kld_loss_u, rec_loss_u, y_loss_u  = 3*[0]
+        for t in range(x.size(0)):
+            # Prior
+            p_yt = self.prior_y_proba(self.prior_y(yt))
+
+            if y[t] != -1:
+                y_t =  y[t].clone()
+                kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t],y_t,h_t, zt)
                 kld_loss_l += kld_loss 
                 rec_loss_l += rec_loss
                 y_loss_l += self._nll_ber(p_yt, y_t)
+                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],h_t ], 0)))
+                if self.add_loss:
+                    add_term += self._add_term_labeled(y_t, q_yt, p_yt)
             else:
-                # q(y_t | x_t, h_{t-1})
-                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t], 0)))
-                # Sample y_t ~ q(y_t | x_t, h_{t-1})
+                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t ], 0)))
                 y_t = self._reparameterized_sample_Gumbell(q_yt)
                 # loss
-                kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t], y_t, h_t)
+                kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t], y_t, h_t, zt)
                 kld_loss_u += kld_loss
                 rec_loss_u += rec_loss
                 y_loss_u += self._kld_cat(p_yt, q_yt)
-                
-            # Recurrent h_t = f(h_{t-1}, y_t, z_t, x_{t-1})
-            if t==0:
-                h_t = self.rnn(torch.cat([y_t, z_t, 0*x[t-1]], 0)[None, :], h_t[None, :]).squeeze(0)
-            else:
-                h_t = self.rnn(torch.cat([y_t, z_t, x[t-1]], 0)[None, :], h_t[None, :]).squeeze(0)
-        return kld_loss_l, rec_loss_l, y_loss_l, kld_loss_u, rec_loss_u, y_loss_u
+            # Recurrence
+            h_t = self.rnn(torch.cat([y_t, z_t, x[t]], 0)[None, :], h_t[None, :]).squeeze(0)
+            zt = z_t.clone()  
+            yt = y_t.clone()
+            
+        return kld_loss_l, rec_loss_l, y_loss_l, kld_loss_u, rec_loss_u, y_loss_u, add_term
         
+    def _add_term_labeled(self, y, q, p):
+        return torch.sum(y * torch.log(p*q) + (1-y) * torch.log((1-p)*(1-q)))
 
     def _nll_ber(self, mean, x):
         nll_loss = F.binary_cross_entropy(mean, x, reduction='sum')
@@ -181,7 +224,6 @@ class TMM_3(nn.Module):
         for weight in self.parameters():
             #weight.normal_(0, stdv)
             weight.data.normal_(0, stdv)
-    
 
     def _reparameterized_sample(self, mean, std):
         """using std to sample"""
@@ -193,32 +235,33 @@ class TMM_3(nn.Module):
         """using std to sample"""
         eps = torch.rand(mean.size()).to(self.device)
         eps = Variable(eps)
-        value = torch.log(eps) - torch.log(1-eps) + torch.log(mean) - torch.log(1-mean)
+        value = (torch.log(eps) - torch.log(1-eps) + torch.log(mean) - torch.log(1-mean)).to(self.device)
         return self.Soft_threshold(value)
     
-    def sample(self, x, y):
-        '''
-        Complete image
-        '''
-        h_t = torch.zeros(self.h_dim).to(self.device)
-        y_complete = y.clone()
-        for t in range(x.size(0)):          
-            if y[t] != -1:
-                y_t = y[t].clone()
-                enc_mean, enc_std = self.encoder(x[t], y_t, h_t)
-                z_t = self._reparameterized_sample(enc_mean, enc_std)
-            else:                
-                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t], 0)))
-                l_x_t = Bernoulli(q_yt)
-                y_t = l_x_t.sample() 
-                #print(y_t)
-                y_complete[t] = y_t.item()                
-                enc_mean, enc_std = self.encoder(x[t], y_t, h_t)
-                z_t = self._reparameterized_sample(enc_mean, enc_std)
-                
-            if t==0:
-                h_t = self.rnn(torch.cat([y_t, z_t, 0*x[t-1]], 0)[None, :], h_t[None, :]).squeeze(0)
-            else:
-                h_t = self.rnn(torch.cat([y_t, z_t, x[t-1]], 0)[None, :], h_t[None, :]).squeeze(0)
-        return y_complete
+   
+        zt = torch.zeros(self.z_dim).to(self.device)
+        yt = torch.zeros(self.y_dim).to(self.device)
+        kld_loss_l, rec_loss_l, y_loss_l, add_term =  4*[0]
+        kld_loss_u, rec_loss_u, y_loss_u  = 3*[0]
+        for t in range(x.size(0)):
+            # Prior
+            p_yt = self.prior_y_proba(self.prior_y(yt))
 
+            if y[t] != -1:
+                y_t =  y[t].clone()
+                kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t],y_t, zt)
+                kld_loss_l += kld_loss 
+                rec_loss_l += rec_loss
+                y_loss_l += self._nll_ber(p_yt, y_t)
+                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],z_t,yt ], 0)))
+                add_term += self._add_term_labeled(y_t, q_yt, p_yt)
+            else:
+                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],z_t,yt ], 0)))
+                y_t = self._reparameterized_sample_Gumbell(q_yt)
+                # loss
+                kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t], y_t, zt)
+                kld_loss_u += kld_loss
+                rec_loss_u += rec_loss
+                y_loss_u += self._kld_cat(p_yt, q_yt)
+            zt = z_t.clone()  
+            yt = y_t.clone()

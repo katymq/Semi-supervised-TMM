@@ -19,17 +19,18 @@ class VSL(nn.Module):
         y_dim: dimension of the label input  (a pixel in this case)
         num_neurons: number of neurons in the hidden layer
     '''
-    def __init__(self, x_dim, z_dim, y_dim, seq, num_neurons, device):
+    def __init__(self, x_dim, z_dim, y_dim, h_dim, num_neurons, device, add_loss=False, bias=False):
         super(VSL,self).__init__()
         self.x_dim = x_dim
         self.z_dim = z_dim
         self.device = device
         self.y_dim = y_dim
         self.num_neurons = num_neurons
-        self.seq = seq
+        self.h_dim = h_dim
+        self.add_loss = add_loss
         self.Soft_threshold = nn.Sigmoid()
-        # Prior p(z_t | x_{t-1}, z_{t-1}) = N (μt, σt)
-        self.prior_z = nn.Sequential( nn.Linear(self.x_dim + self.z_dim, self.num_neurons),
+        # Prior p(z_t | h_{t-1}) = N (μt, σt)
+        self.prior_z = nn.Sequential( nn.Linear(self.h_dim, self.num_neurons),
                                   nn.ReLU())
         self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
         
@@ -43,7 +44,9 @@ class VSL(nn.Module):
                                 )
         # Encoder
         # q(z_t |x_T) = N (μt, σt)
-        self.enc = nn.Sequential(nn.Linear(self.seq*self.x_dim , self.num_neurons),
+        self.enc = nn.Sequential(nn.Linear(self.x_dim + self.h_dim , self.num_neurons),
+                                nn.ReLU(),
+                                nn.Linear(self.num_neurons, self.num_neurons),
                                 nn.ReLU())
         self.enc_mean = nn.Linear(self.num_neurons, self.z_dim)
         self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
@@ -57,9 +60,11 @@ class VSL(nn.Module):
         self.dec_mean = nn.Linear(self.num_neurons, self.x_dim)
         self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim), 
                                     nn.Softplus())
+        self.rnn = nn.RNNCell( self.x_dim , self.h_dim, bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
 
-    def encoder(self, xT):
-        enc = self.enc(xT)
+
+    def encoder(self,x,h):
+        enc = self.enc(torch.cat([x, h], 0))
         enc_mean = self.enc_mean(enc)
         enc_std = self.enc_std(enc)
         return enc_mean, enc_std
@@ -70,36 +75,64 @@ class VSL(nn.Module):
         dec_std = self.dec_std(dec)
         return dec_mean, dec_std
     
-    def get_cost_labeled(self, x,zt, xT):
-        # zt : z_{t-1}
-        prior_zt = self.prior_z(torch.cat([x, zt], 0))
-        prior_zt_mean = self.prior_z_mean(prior_zt)
-        prior_zt_std = self.prior_z_std(prior_zt)
-        # Encoder 
-        enc_mean, enc_std = self.encoder(xT)
-        z_t = self._reparameterized_sample(enc_mean, enc_std)
-        # Decoder 
-        dec_mean, dec_std = self.decoder(z_t)
-        # Loss
-        kld_loss_l = self._kld_gauss(enc_mean, enc_std, prior_zt_mean, prior_zt_std)
-        rec_loss_l = self._rec_gauss(x, dec_mean, dec_std)
-        return kld_loss_l, rec_loss_l, z_t
-
-    def forward(self, x, y):
-        zt = torch.zeros(self.z_dim).to(self.device)
-        kld_loss_l, rec_loss_l, y_loss_l, add_term =  4*[0]
-        y_loss_u  = 0
+    def reconstruction(self, x, y):
+        h_t = torch.zeros(self.h_dim).to(self.device)
+        y_complete = y.clone()
         for t in range(x.size(0)):
+            # Encoder 
+            enc_mean, enc_std = self.encoder(x[t], h_t)
+            z_t = self._reparameterized_sample(enc_mean, enc_std)
             if y[t] == -1:
-                #! Check this part
-                kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t], zt, x[:t+1].view(-1))
-                kld_loss_l += kld_loss 
-                rec_loss_l += rec_loss
-            else:
                 class_yt = self.class_y(z_t)
-                y_loss_u  += self._nll_ber(class_yt, y[t])
-            zt = z_t.clone()  
-        return kld_loss_l, rec_loss_l, y_loss_u
+                y_t = torch.round(class_yt)
+                y_complete[t] = y_t.item()
+            h_t = self.rnn(x[t][None, :], h_t[None, :]).squeeze(0)
+            
+        return y_complete
+        
+    def forward(self, x, y):
+        h_t = torch.zeros(self.h_dim).to(self.device)
+        kld_loss, rec_loss =  2*[0]
+        y_loss_l  = 0
+        for t in range(x.size(0)):
+            # Encoder 
+            enc_mean, enc_std = self.encoder(x[t], h_t)
+            z_t = self._reparameterized_sample(enc_mean, enc_std)
+            prior_zt = self.prior_z(h_t)
+            prior_zt_mean = self.prior_z_mean(prior_zt)
+            prior_zt_std = self.prior_z_std(prior_zt)
+            dec_mean, dec_std = self.decoder(z_t)
+            kld_loss += self._kld_gauss(enc_mean, enc_std, prior_zt_mean, prior_zt_std)
+            rec_loss += self._rec_gauss(x[t], dec_mean, dec_std)
+            if y[t] != -1:
+                class_yt = self.class_y(z_t)
+                y_loss_l  += self._nll_ber(class_yt, y[t])
+            h_t = self.rnn(x[t][None, :], h_t[None, :]).squeeze(0)
+            
+        return kld_loss, rec_loss, y_loss_l
+
+    # def forward(self, x, y):
+    #     h_t = torch.zeros(self.h_dim).to(self.device)
+    #     kld_loss_u, rec_loss_u =  2*[0]
+    #     y_loss_l  = 0
+    #     for t in range(x.size(0)):
+    #         # Encoder 
+    #         enc_mean, enc_std = self.encoder(x[t], h_t)
+    #         z_t = self._reparameterized_sample(enc_mean, enc_std)
+    #         if y[t] == -1:
+    #             #! Check this part
+    #             prior_zt = self.prior_z(h_t)
+    #             prior_zt_mean = self.prior_z_mean(prior_zt)
+    #             prior_zt_std = self.prior_z_std(prior_zt)
+    #             dec_mean, dec_std = self.decoder(z_t)
+    #             kld_loss_u += self._kld_gauss(enc_mean, enc_std, prior_zt_mean, prior_zt_std)
+    #             rec_loss_u += self._rec_gauss(x[t], dec_mean, dec_std)
+    #         else:
+    #             class_yt = self.class_y(z_t)
+    #             y_loss_l  += self._nll_ber(class_yt, y[t])
+    #         h_t = self.rnn(x[t][None, :], h_t[None, :]).squeeze(0)
+            
+    #     return kld_loss_u, rec_loss_u, y_loss_l
         
     def _add_term_labeled(self, y, q, p):
         return torch.sum(y * torch.log(p*q) + (1-y) * torch.log((1-p)*(1-q)))

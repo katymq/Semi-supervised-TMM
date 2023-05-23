@@ -22,13 +22,14 @@ class SVRNN_2(nn.Module):
         num_neurons: number of neurons in the hidden layer
 
     '''
-    def __init__(self, x_dim, z_dim, h_dim, y_dim, num_neurons, device, bias = False):
+    def __init__(self, x_dim, z_dim, h_dim, y_dim, num_neurons, device, add_loss=True, bias = False):
         super(SVRNN_2, self).__init__()
         self.x_dim = x_dim
         self.z_dim = z_dim
         self.h_dim = h_dim
         self.device = device
         self.y_dim = y_dim
+        self.add_loss = add_loss
         self.num_neurons = num_neurons
         self.Soft_threshold = nn.Sigmoid()
 
@@ -125,25 +126,20 @@ class SVRNN_2(nn.Module):
         
     def forward(self, x, y):
         h_t = torch.zeros(self.h_dim).to(self.device)
-        kld_loss_l = 0
-        rec_loss_l = 0
-        y_loss_l = 0
-        add_term = 0
-
-        kld_loss_u = 0
-        rec_loss_u = 0
-        y_loss_u = 0
+        kld_loss_l, rec_loss_l, y_loss_l, add_term =  4*[0]
+        kld_loss_u, rec_loss_u, y_loss_u  = 3*[0]
         for t in range(x.size(0)):
             # Prior p(y_t | h_{t-1})
             p_yt = self.prior_y_proba(self.prior_y(h_t))
             if y[t] != -1:
                 y_t =  y[t].clone()
-                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t], 0)))
                 kld_loss, rec_loss, z_t = self.get_cost_labeled(x[t], y_t, h_t)
                 kld_loss_l += kld_loss 
                 rec_loss_l += rec_loss
                 y_loss_l += self._nll_ber(p_yt, y_t)
-                add_term += self._add_term_labeled(y_t, q_yt, p_yt)
+                if self.add_loss:
+                    q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t], 0)))
+                    add_term += self._add_term_labeled(y_t, q_yt, p_yt)
             else:
                 # q(y_t | x_t, h_{t-1})
                 q_yt = self.q_y_proba(self.q_y(torch.cat([x[t], h_t], 0)))
@@ -206,7 +202,7 @@ class SVRNN_2(nn.Module):
         value = (torch.log(eps) - torch.log(1-eps) + torch.log(mean) - torch.log(1-mean)).to(self.device)
         return self.Soft_threshold(value)
     
-    def sample(self, x, y):
+    def reconstruction(self, x, y):
         '''
         Complete image
         '''

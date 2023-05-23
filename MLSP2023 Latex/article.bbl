@@ -1,0 +1,91 @@
+\begin{thebibliography}{10}
+
+\bibitem{rabiner1989tutorial}
+L.~R. Rabiner,
+\newblock ``A tutorial on {H}idden {M}arkov {M}odels and selected applications
+  in speech recognition,''
+\newblock {\em Proceedings of the IEEE}, vol. 77, no. 2, pp. 257--286, 1989.
+
+\bibitem{morales2021variational}
+K.~Morales and Y.~Petetin,
+\newblock ``Variational {B}ayesian inference for pairwise markov models,''
+\newblock in {\em 2021 IEEE Statistical Signal Processing Workshop (SSP)}.
+  IEEE, 2021, pp. 251--255.
+
+\bibitem{wp-pami}
+W.~Pieczynski,
+\newblock ``Pairwise {M}arkov chains,''
+\newblock {\em IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  vol. 25, no. 5, pp. 634--39, May 2003.
+
+\bibitem{wp-cras-chaines3}
+W.~Pieczynski,
+\newblock ``Chaines de {M}arkov triplet,''
+\newblock {\em Comptes Rendus de l'Academie des Sciences - Mathematiques}, vol.
+  335, pp. 275--278, 2002,
+\newblock in French.
+
+\bibitem{pieczynski2005triplet}
+W.~Pieczynski and F.~Desbouvries,
+\newblock ``On triplet {M}arkov chains,''
+\newblock in {\em International Symposium on Applied Stochastic Models and Data
+  Analysis, ({ASMDA})}, 2005.
+
+\bibitem{White-MLE}
+H.~White,
+\newblock ``Maximum likelihood estimation of misspecified models,''
+\newblock {\em Econometrica}, vol. 50, no. 1, pp. 1--25, January 1982.
+
+\bibitem{Douc-ML-MIS}
+R.~Douc and E.~Moulines,
+\newblock ``Asymptotic properties of the maximum likelihood estimation in
+  misspecified hidden {M}arkov models,''
+\newblock {\em Annals of Statistics}, vol. 40, no. 5, pp. 2697--2732, 2012.
+
+\bibitem{variational-EM}
+D.~G. Tzikas, A.~C. Likas, and N.~P. Galatsanos,
+\newblock ``The variational approximation for {B}ayesian inference,''
+\newblock {\em IEEE Signal Processing Magazine}, vol. 25, no. 6, pp. 131--146,
+  2008.
+
+\bibitem{kingma2013auto}
+D.~P. Kingma and M.~Welling,
+\newblock ``Auto-encoding variational {B}ayes,''
+\newblock in {\em 2nd International Conference on Learning Representations,
+  {ICLR}}, 2014.
+
+\bibitem{maddison2016concrete}
+Chris~J Maddison, Andriy Mnih, and Yee~Whye Teh,
+\newblock ``The concrete distribution: A continuous relaxation of discrete
+  random variables,''
+\newblock {\em arXiv preprint arXiv:1611.00712}, 2016.
+
+\bibitem{jang2016categorical}
+Eric Jang, Shixiang Gu, and Ben Poole,
+\newblock ``Categorical reparameterization with gumbel-softmax,''
+\newblock {\em arXiv preprint arXiv:1611.01144}, 2016.
+
+\bibitem{gangloff2023deep}
+H.~Gangloff, K.~Morales, and Y.~Petetin,
+\newblock ``Deep parameterizations of pairwise and triplet markov models for
+  unsupervised classification of sequential data,''
+\newblock {\em Computational Statistics \& Data Analysis}, vol. 180, pp.
+  107663, 2023.
+
+\bibitem{binaryimg}
+LEMS-Computer~Vision Group,
+\newblock ``Binary shape,''
+\newblock {\em
+  https://vision.lems.brown.edu/content/available-software-and-databases}.
+
+\bibitem{sagan2012space}
+H.~Sagan,
+\newblock {\em Space-filling curves},
+\newblock Springer, 2012.
+
+\bibitem{adam}
+D.~Kingma and J.~Ba,
+\newblock ``Adam: A method for stochastic optimization,''
+\newblock {\em International conference on learning representations}, 12 2014.
+
+\end{thebibliography}

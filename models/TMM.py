@@ -14,12 +14,13 @@ class TMM(nn.Module):
     '''
     TMM as the review article (Yohan and Hugo) + add term of SVRNN for labeled data
     '''
-    def __init__(self, x_dim, z_dim, y_dim, num_neurons, device):
+    def __init__(self, x_dim, z_dim, y_dim, num_neurons, device, add_loss = True):
         super(TMM,self).__init__()
         self.x_dim = x_dim
         self.z_dim = z_dim
         self.device = device
         self.y_dim = y_dim
+        self.add_loss = add_loss
         self.num_neurons = num_neurons
         self.Soft_threshold = nn.Sigmoid()
         # Prior p(z_t | z_{t-1}) = N (μt, σt)
@@ -96,6 +97,30 @@ class TMM(nn.Module):
         rec_loss_l = self._rec_gauss(x, dec_mean, dec_std)
         return kld_loss_l, rec_loss_l, z_t
 
+    def reconstruction(self, x, y):
+        '''
+        Complete image
+        '''
+        y_complete = y.clone()
+        zt = torch.zeros(self.z_dim).to(self.device)
+        yt = torch.zeros(self.y_dim).to(self.device)
+        for t in range(x.size(0)):
+            if y[t] != -1:
+                enc_mean, enc_std = self.encoder(x[t], zt)
+                z_t = self._reparameterized_sample(enc_mean, enc_std)
+                y_t =  y[t].clone()
+            else:
+                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],z_t,yt], 0)))
+                l_x_t = Bernoulli(q_yt)
+                y_t = l_x_t.sample() 
+                y_complete[t] = y_t.item() 
+                enc_mean, enc_std = self.encoder(x[t], zt)
+                z_t = self._reparameterized_sample(enc_mean, enc_std)
+            zt = z_t.clone()  
+            yt = y_t.clone()
+
+        return y_complete
+    
     def forward(self, x, y):
         zt = torch.zeros(self.z_dim).to(self.device)
         yt = torch.zeros(self.y_dim).to(self.device)
@@ -111,8 +136,9 @@ class TMM(nn.Module):
                 kld_loss_l += kld_loss 
                 rec_loss_l += rec_loss
                 y_loss_l += self._nll_ber(p_yt, y_t)
-                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],z_t,yt ], 0)))
-                add_term += self._add_term_labeled(y_t, q_yt, p_yt)
+                if self.add_loss:
+                    q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],z_t,yt ], 0)))
+                    add_term += self._add_term_labeled(y_t, q_yt, p_yt)
             else:
                 q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],z_t,yt ], 0)))
                 y_t = self._reparameterized_sample_Gumbell(q_yt)
@@ -168,27 +194,5 @@ class TMM(nn.Module):
         value = (torch.log(eps) - torch.log(1-eps) + torch.log(mean) - torch.log(1-mean)).to(self.device)
         return self.Soft_threshold(value)
     
-    def sample(self, x, y):
-        '''
-        Complete image
-        '''
-        y_complete = y.clone()
-        zt = torch.zeros(self.z_dim).to(self.device)
-        yt = torch.zeros(self.y_dim).to(self.device)
-        for t in range(x.size(0)):
-            if y[t] != -1:
-                enc_mean, enc_std = self.encoder(x[t], zt)
-                z_t = self._reparameterized_sample(enc_mean, enc_std)
-                y_t =  y[t].clone()
-            else:
-                q_yt = self.q_y_proba(self.q_y(torch.cat([x[t],z_t,yt], 0)))
-                l_x_t = Bernoulli(q_yt)
-                y_t = l_x_t.sample() 
-                y_complete[t] = y_t.item() 
-                enc_mean, enc_std = self.encoder(x[t], zt)
-                z_t = self._reparameterized_sample(enc_mean, enc_std)
-            zt = z_t.clone()  
-            yt = y_t.clone()
-
-        return y_complete
+    
 
