@@ -46,18 +46,18 @@ def run_model_seq(x, y,model,optimizer,clip, path_save_model, n_epochs,save_ever
     print('The model is saved in this path', os.path.join(path_save_model, model.__class__.__name__.casefold()))
     for epoch in range(epoch_init, n_epochs + 1):
         #training
-        if  model.__class__.__name__.casefold() == 'svrnn':
-            kld_loss_l, rec_loss_l, y_loss_l, kld_loss_u, rec_loss_u, y_loss_u = model(x,y)
-            loss_l = kld_loss_l + rec_loss_l + y_loss_l
-            loss_u = kld_loss_u + rec_loss_u + y_loss_u        
-            loss = loss_l + loss_u
+        # if  model.__class__.__name__.casefold() == 'svrnn':
+        #     kld_loss_l, rec_loss_l, y_loss_l, kld_loss_u, rec_loss_u, y_loss_u = model(x,y)
+        #     loss_l = kld_loss_l + rec_loss_l + y_loss_l
+        #     loss_u = kld_loss_u + rec_loss_u + y_loss_u        
+        #     loss = loss_l + loss_u
         if  model.__class__.__name__.casefold() == 'vsl':
             kld_loss_u, rec_loss_u, y_loss_l = model(x,y)
             loss_l = y_loss_l
             loss_u = kld_loss_u + rec_loss_u        
             loss = loss_l + beta*loss_u
         else:
-            # 'svrnn_2' "tmm"
+            # 'svrnn_2' "tmm" all versions
             kld_loss_l, rec_loss_l, y_loss_l, kld_loss_u, rec_loss_u, y_loss_u, add_term= model(x,y)
             loss_l = kld_loss_l + rec_loss_l + y_loss_l
             loss_u = kld_loss_u + rec_loss_u + y_loss_u        

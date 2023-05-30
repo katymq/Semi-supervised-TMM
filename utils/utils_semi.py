@@ -4,7 +4,7 @@ from utils.Hilbert_curve import HilbertCurve
 import numpy as np
 import matplotlib.pyplot as plt
 from torch import nn
-
+import cv2
 '''
 This code (idea) is from Hugo Gangloff's github repo:
 '''
@@ -15,7 +15,32 @@ requires the sequence have length equal to a power of 2
 based on hilbertcurve.py from the package https://github.com/galtay/hilbertcurve
 '''
 
-np.random.seed(19)
+np.random.seed(123)
+
+def read_create_x_y_ymiss(image_file, size, mu, sigma, p, multi_noise):
+    img = plt.imread(image_file)//255
+    image = cv2.resize(img, (size, size)).astype('int16')
+    chain = image_to_chain(image)
+    x = np.zeros(len(chain))
+    if multi_noise:
+        z = np.random.normal(size = len(chain))
+        for t in range(len(chain)):
+            x[t] = z[t]*np.random.normal(mu*(chain[t]), sigma, 1)
+    else:
+        for t in range(len(chain)):
+            if t == 0:
+                x[t] = np.random.normal(np.sin(mu*(chain[t])), sigma, 1)
+            else:
+                x[t] = np.random.normal(np.sin(mu*(chain[t]) + x[t-1]), sigma, 1)
+
+    image_x = chain_to_image(x).reshape(size, size)
+    mask_missing = np.random.choice([0,1], size=image.shape, p=[p, 1-p])
+    label_miss = image.copy()
+    label_miss[mask_missing==0] = -1
+    # print(image_x.shape)
+    # print(image.shape)
+    # print(label_miss.shape)
+    return image_x, image, label_miss
 
 def create_missing_labels(img, p):
     '''
@@ -25,42 +50,6 @@ def create_missing_labels(img, p):
     label_miss = img.copy()
     label_miss[mask_missing==0] = -1
     return label_miss
-
-# def train(train_loader, epoch, model, optimizer, batch_sz, clip, print_every,device):
-#     train_loss = 0
-#     for batch_idx, datos in enumerate(train_loader):
-#         x, y = datos
-#         x, y = x.to(device), y.to(device)
-#         x = x.transpose(0, 1).unsqueeze(2)
-            
-#         #forward + backward + optimize
-#         optimizer.zero_grad()
-    
-#         kld_loss_l, rec_loss_l, y_loss_l, kld_loss_u, rec_loss_u, y_loss_u = model(data)
-#         loss_l = kld_loss_l + rec_loss_l + y_loss_l
-#         loss_u = kld_loss_u + rec_loss_u + y_loss_u
-#         loss = loss_l + loss_u
-#         loss.backward()
-#         nn.utils.clip_grad_norm(model.parameters(), clip)
-#         optimizer.step()
-        
-#         #printing
-#         if batch_idx % print_every == 0:
-#             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t  Loss Labeled: {:.6f} \t Loss Unlabeled: {:.6f}'.format(
-#                 epoch, batch_idx * len(datos), len(train_loader.dataset),
-#                 100. * batch_idx / len(train_loader),
-#                 loss_l.item()/batch_sz,
-#                 loss_u.item()/batch_sz))     
-#             print('\n kdl_loss_l: {:.4f} \t rec_loss_l: {:.4f} \t y_loss_l: {:.4f}'.format(kld_loss_l.item()/batch_sz, rec_loss_l.item()/batch_sz, y_loss_l.item()/batch_sz))
-#             print('\n kdl_loss_u: {:.4f} \t rec_loss_u: {:.4f} \t y_loss_u: {:.4f}'.format(kld_loss_u.item()/batch_sz, rec_loss_u.item()/batch_sz, y_loss_u.item()/batch_sz))
-#         train_loss += loss.item()
-        
-#     print('')
-#     print('Train> Epoch: {} average -ELBO: {:.4f}'.format(epoch, train_loss/ len(train_loader.dataset)))
-#     return train_loss/ len(train_loader.dataset)
-
-
-
 def creation_noisy_image(img, mu, sigma,p,  size = 28):
     '''
     image: image of size 28*28
