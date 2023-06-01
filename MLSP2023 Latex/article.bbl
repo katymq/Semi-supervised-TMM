@@ -1,22 +1,39 @@
 \begin{thebibliography}{10}
 
-\bibitem{rabiner1989tutorial}
+\bibitem{rabiner}
 L.~R. Rabiner,
 \newblock ``A tutorial on {H}idden {M}arkov {M}odels and selected applications
   in speech recognition,''
-\newblock {\em Proceedings of the IEEE}, vol. 77, no. 2, pp. 257--286, 1989.
+\newblock {\em Proceedings of the IEEE}, vol. 77, no. 2, pp. 257--286, February
+  1989.
 
-\bibitem{morales2021variational}
-K.~Morales and Y.~Petetin,
-\newblock ``Variational {B}ayesian inference for pairwise markov models,''
-\newblock in {\em 2021 IEEE Statistical Signal Processing Workshop (SSP)}.
-  IEEE, 2021, pp. 251--255.
+\bibitem{morwal2012named}
+S.~Morwal, N.~Jahan, and D.~Chopra,
+\newblock ``Named entity recognition using hidden markov model (hmm),''
+\newblock {\em International Journal on Natural Language Computing (IJNLC)
+  Vol}, vol. 1, 2012.
 
-\bibitem{wp-pami}
-W.~Pieczynski,
-\newblock ``Pairwise {M}arkov chains,''
-\newblock {\em IEEE Transactions on Pattern Analysis and Machine Intelligence},
-  vol. 25, no. 5, pp. 634--39, May 2003.
+\bibitem{reyes2016transition}
+J.-L. Reyes-Ortiz, L.~Oneto, A.~Sam\`{a}, X.~Parra, and D.~Anguita,
+\newblock ``Transition-aware human activity recognition using smartphones,''
+\newblock {\em Neurocomputing}, vol. 171, pp. 754–767, 2016.
+
+\bibitem{chen2019variational}
+M.~Chen, Q.~Tang, K.~Livescu, and K.~Gimpel,
+\newblock ``Variational sequential labelers for semi-supervised learning,''
+\newblock {\em arXiv preprint arXiv:1906.09535}, 2019.
+
+\bibitem{butepage2019predicting}
+J.~Butepage, H.~Kjellstrom, and D.~Kragic,
+\newblock ``Predicting the what and how-a probabilistic semi-supervised
+  approach to multi-task human activity modeling,''
+\newblock in {\em Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition Workshops}, 2019, pp. 0--0.
+
+\bibitem{Jordan99anintroduction}
+I.~J. Michael, G.~Zoubin, T.~S. Jaakola, and L.~K. Saul,
+\newblock ``An introduction to variational methods for graphical models,''
+\newblock in {\em MACHINE LEARNING}. 1999, pp. 183--233, MIT Press.
 
 \bibitem{wp-cras-chaines3}
 W.~Pieczynski,
@@ -55,22 +72,15 @@ D.~P. Kingma and M.~Welling,
   {ICLR}}, 2014.
 
 \bibitem{maddison2016concrete}
-Chris~J Maddison, Andriy Mnih, and Yee~Whye Teh,
+C~J. Maddison, A.~Mnih, and Y.~W. Teh,
 \newblock ``The concrete distribution: A continuous relaxation of discrete
   random variables,''
 \newblock {\em arXiv preprint arXiv:1611.00712}, 2016.
 
 \bibitem{jang2016categorical}
-Eric Jang, Shixiang Gu, and Ben Poole,
+E.~Jang, S.~Gu, and B.~Poole,
 \newblock ``Categorical reparameterization with gumbel-softmax,''
 \newblock {\em arXiv preprint arXiv:1611.01144}, 2016.
-
-\bibitem{gangloff2023deep}
-H.~Gangloff, K.~Morales, and Y.~Petetin,
-\newblock ``Deep parameterizations of pairwise and triplet markov models for
-  unsupervised classification of sequential data,''
-\newblock {\em Computational Statistics \& Data Analysis}, vol. 180, pp.
-  107663, 2023.
 
 \bibitem{binaryimg}
 LEMS-Computer~Vision Group,
@@ -82,6 +92,13 @@ LEMS-Computer~Vision Group,
 H.~Sagan,
 \newblock {\em Space-filling curves},
 \newblock Springer, 2012.
+
+\bibitem{gangloff2023deep}
+H.~Gangloff, K.~Morales, and Y.~Petetin,
+\newblock ``Deep parameterizations of pairwise and triplet markov models for
+  unsupervised classification of sequential data,''
+\newblock {\em Computational Statistics \& Data Analysis}, vol. 180, pp.
+  107663, 2023.
 
 \bibitem{adam}
 D.~Kingma and J.~Ba,

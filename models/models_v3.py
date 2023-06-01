@@ -45,7 +45,6 @@ class SVRNN(nn.Module):
         self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
         self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
                                     nn.Softplus())
-        
         # Prior p(y_t | h_{t-1}) = Cat (θt) 
         # In this case, we use a linear layer to predict the logits of the categorical distribution
         # We will use the sigmoid function to ensure that the logits are positive and only two classes

@@ -3,7 +3,6 @@
 from utils.Hilbert_curve import HilbertCurve
 import numpy as np
 import matplotlib.pyplot as plt
-from torch import nn
 import cv2
 '''
 This code (idea) is from Hugo Gangloff's github repo:
@@ -14,9 +13,63 @@ This code (idea) is from Hugo Gangloff's github repo:
 requires the sequence have length equal to a power of 2
 based on hilbertcurve.py from the package https://github.com/galtay/hilbertcurve
 '''
+np.random.seed(19594)
+def generate_noisy_image(image_file_path, output_size, noise_mean, noise_stddev, use_multiplicative_noise):
+    """
+    Reads an image file, creates a noisy version of the image, and generates a mask for missing pixels.
 
-np.random.seed(123)
+    Parameters:
+    image_file_path (str): Path to the input image file.
+    output_size (int): Size of the output image.
+    noise_mean (float): Mean of the noise.
+    noise_stddev (float): Standard deviation of the noise.
+    missing_pixel_prob (float): Probability of a pixel being missing.
+    use_multiplicative_noise (bool): Whether to use multiplicative noise.
 
+    Returns:
+    noisy_image (ndarray): Noisy version of the input image.
+    original_image (ndarray): Original input image (binary)
+    """
+    # Check if image file exists
+    if not os.path.isfile(image_file_path):
+        raise FileNotFoundError(f"File '{image_file_path}' does not exist.")
+
+    # Load image
+    original_image = plt.imread(image_file_path)
+    original_image = cv2.resize(original_image, (output_size, output_size), interpolation=cv2.INTER_NEAREST)
+    # original_image = cv2.cvtColor(original_image, cv2.COLOR_RGB2GRAY)
+    _, original_image = cv2.threshold(original_image, 127, 1, cv2.THRESH_BINARY)
+
+    # Convert image to chain
+    chain = image_to_chain(original_image)
+
+    # Generate noisy chain
+    noisy_chain = np.zeros(len(chain))
+    if use_multiplicative_noise:
+        z = np.random.randn(len(chain))
+        for t in range(len(chain)):
+            noisy_chain[t] = z[t] * np.random.normal(noise_mean * chain[t], noise_stddev, 1)
+    else:
+        for t in range(len(chain)):
+            if t == 0:
+                noisy_chain[t] = np.random.normal(np.sin(noise_mean * chain[t]), noise_stddev, 1)
+            else:
+                noisy_chain[t] = np.random.normal(np.sin(noise_mean * chain[t] + noisy_chain[t-1]), noise_stddev, 1)
+
+    # Convert noisy chain to image
+    noisy_image = chain_to_image(noisy_chain).reshape(output_size, output_size)
+    noisy_image = cv2.normalize(noisy_image.astype('float32'), None, 0.0, 1.0, cv2.NORM_MINMAX)
+
+    return noisy_image, original_image
+
+def get_input(prompt, input_type):
+    while True:
+        try:
+            user_input = input_type(input(prompt))
+            return user_input
+        except ValueError:
+            print('Invalid input. Please try again.')
+            
 def read_create_x_y_ymiss(image_file, size, mu, sigma, p, multi_noise):
     img = plt.imread(image_file)//255
     image = cv2.resize(img, (size, size)).astype('int16')
@@ -34,13 +87,11 @@ def read_create_x_y_ymiss(image_file, size, mu, sigma, p, multi_noise):
                 x[t] = np.random.normal(np.sin(mu*(chain[t]) + x[t-1]), sigma, 1)
 
     image_x = chain_to_image(x).reshape(size, size)
+    image_xx = (image_x.astype('float') - np.min(image_x)) / (np.max(image_x) - np.min(image_x))
     mask_missing = np.random.choice([0,1], size=image.shape, p=[p, 1-p])
     label_miss = image.copy()
     label_miss[mask_missing==0] = -1
-    # print(image_x.shape)
-    # print(image.shape)
-    # print(label_miss.shape)
-    return image_x, image, label_miss
+    return image_xx, image, label_miss
 
 def create_missing_labels(img, p):
     '''

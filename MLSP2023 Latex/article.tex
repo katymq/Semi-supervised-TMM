@@ -94,15 +94,15 @@
 \usepackage{todonotes}
 \usepackage[export]{adjustbox}
 \usepackage{xcolor}
-
 % -----------------------------------------
 % Notations
 \DeclareMathOperator*{\argmax}{arg\,max}
 \def\x{{\mathbf x}}
 \def\z{{\mathbf z}}
 \def\y{{\mathbf y}}
-\def\yl{{\mathbf y}_{T^{\mathcal{L}}}}
-\def\yu{{\mathbf y}_{T^{\mathcal{U}}}}
+\def\v{{\mathbf v}}
+\def\yl{{\mathbf y}_{T}^{\mathcal{L}}}
+\def\yu{{\mathbf y}_{T}^{\mathcal{U}}}
 
 \def\h{{\mathbf h}}
 \def\hh{{\mathbf h'}}
@@ -123,18 +123,12 @@
 %\newcommand{\argmin}{\mathop{\mathrm{arg\,min}}
 \def\dkl{\mathrm{D}_{\mathrm{KL}}}
 \def\argmin{\underset{q\in \mathcal{Q}}{\mathrm{arg\,min}}}
-\newcommand{\katyN}[1]{\todo[inline,color=pink]{#1 --- Katy}}
-\newcommand{\katy}[1]{\todo[size=\tiny,color=pink]{#1  \hfill --- Kat}}
-\newcommand{\observation}[1]{\todo[size=\tiny,color=orange]{#1  \hfill --- obs}}
-% \newcommand{\corrections}[2]{\stcyan{#1}~\cyan{#2}}
+\newcommand{\katy}[1]{\todo[inline,color=pink]{#1 --- Katy}}
+\newcommand{\yohan}[1]{\todo[size=\tiny,color=orange]{#1  \hfill --- Yohan}}
+\newcommand{\corrections}[2]{\stcyan{#1}~\cyan{#2}}
 %===============================
 \newtheorem{example}{Example}
 \newtheorem{remark}{Remark}
-\newcommand{\cfbox}[2]{%
-    \colorlet{currentcolor}{.}%
-    {\color{#1}%
-    \fbox{\color{currentcolor}#2}}%
-}
 %===============================
 % -----------------------------------------
 % -----------------------------------------
@@ -151,7 +145,11 @@
 
 \begin{abstract}
 % The abstract should contain about 100 to 150 words,
-In this article, xxx
+Triplet Markov chains are general generative models for sequential data which take into account three kinds of random variables: (noisy) observations, their associated discrete labels and latent variables which aim at strengthening the distribution of the observations and their associated labels.
+However, in practice, we do not have at our disposal all the labels associated to the observations to estimate the parameters of such models. In this paper, we propose
+a general framework based on a variational Bayesian inference to 
+train parameterized triplet Markov chain models in a semi-supervised context. The generality of our approach enables us to derive semi-supervised
+algorithms for a variety of generative models for sequential Bayesian classification.
 \end{abstract}
 %
 \begin{keywords}
@@ -160,58 +158,119 @@ Generative Models; Variational Inference; Semi-Supervised Learning; Triplet Mark
 %
 \section{Introduction}
 \label{sec:intro}
-Let $\x_T=(x_{0}, \dots, x_{T})$ and $\z_T=(z_{0}, \dots, z_{T})$  be two
-sequences of observed and latent  random variables (r.v.), respectively, 
-where  $x_t \in \mathbb{R}^{d_x}$ and $z_t \in \mathbb{R}^{d_z}$. 
-We also define a  third process of discrete values $\y_T=(y_{0}, \dots,\; y_{T})$, 
-where $y_t \in \Omega=\{\omega_1,\dots,\omega_C\}$.
+This paper focuses on semi-supervised 
+learning for sequential Bayesian classification 
+in general generative models. Let us start by
+recalling the principle of Bayesian classification
+and semi-supervised estimation.
+
+\subsection{Sequential Bayesian classification}
+We denote as $\x_T=(x_{0}, \dots, x_{T})$
+a sequence of observed random variables (r.v.) and $\z_T=(z_{0}, \dots, z_{T})$ a sequence of latent r.v. We also introduce a sequence
+of labels $\y_T=(y_{0}, \dots,\; y_{T})$ associated to the previous sequence $\x_T$. We will assume that  $x_t \in \mathbb{R}^{d_x}$, $z_t \in \mathbb{R}^{d_z}$ while the label
+$y_t$ is discrete, so  $y_t \in \Omega=\{\omega_1,\dots,\omega_C\}$.
 As far as notations are concerned, we do not distinguish r.v. and their realizations.
+%We will assume that  $x_t \in \mathbb{R}^{d_x}$ and $z_t \in \mathbb{R}^{d_z}$. For example,
+For example, $\x_T$ can represent a noisy grayscale image while $\y_T$ represents the original black and white image. For this application, the latent variable $z_t$ can be used to govern the conditional distribution of the noise given the original label.
+
+When the labels associated to $\x_T$
+are not observed, the objective associated to Bayesian classification consists in computing, for all $t$, the posterior distributions 
+\begin{equation}
+\label{eq:post_distrib}
+p(y_t|\x_T)= %\frac{p(y_t,\x_T)}{p(\x_T)}= 
+\frac{\sum_{\y_{0:t-1},\y_{t+1:T}} \int p(\y_T,\x_T,\z_T) {\rm d}\z_T  } {\sum_{\y_T} \int p(\y_T,\x_T,\z_T) {\rm d}\z_T} \text{.}
+\end{equation}
+Consequently, we 
+first need to define a parameterized model $\p(\x_T,\y_T,\z_T)$ which aims
+at describing the r.v. involved in the
+problem and from which 
+it is possible to estimate 
+$\theta$ and next to compute \eqref{eq:post_distrib} in a reasonable computational cost. 
+
+The estimation of $\theta$ (i.e. the learning step) can be realized from sequences where we have at our disposal $(\x_T,\y_T)$ (supervised learning) or only $\x_T$ (unsupervised learning).
+This general problem is commonly used in many fields, such as speech recognition~\cite{rabiner}, 
+natural language processing~\cite{morwal2012named}, and activity recognition~\cite{reyes2016transition}. 
+
+
+
+
+% Let $\x_T=(x_{0}, \dots, x_{T})$ and $\y_T=(y_{0}, \dots,\; y_{T})$  be two
+% sequences of observed and label (observed or latent) random variables (r.v.) of length $T+1$, respectively, 
+% where  $x_t \in \mathbb{R}^{d_x}$ and $y_t \in \Omega=\{\omega_1,\dots,\omega_C\}$. 
+% As far as notations are concerned, we do not distinguish r.v. and their realizations.
 
 \subsection{Semi-Supervised learning}
-Sequential data is characterized by a temporal ordering of observations. 
-It is commonly used in many fields, such as speech recognition XX, 
-natural language processing XX, and activity recognition XX, etc. 
-Labeled sequential data is sequential data that is annotated with labels
-that indicate the meaning or class of each observation.
-These labels are essential for many applications, such as supervised classification, 
-anomaly detection, and clustering.
-However, in many real-world applications, it is expensive or impossible to obtain
-labels for the entire sequence due to various reasons such as the high cost of
-labeling, the lack of expertise, or the lack of time. 
-In such cases, partially labeled sequential data, which only has labels 
-for some of the observations, can be used instead.
+The problem we consider in this paper is a little bit different. In many real-world applications, it is expensive or impossible to obtain
+labels for the entire sequence due to various reasons such as the high cost of labeling, the lack of expertise, or the lack of time. 
+So from now on we assume that
+we have at our disposal a sequence of observations
+$\x_T$ with partially observed labels
+and that i) we want to train a relevant
+generative models; and ii) we look for estimating the missing labels associated to each sequences. In other words, decomposing a sequence of labels $\y_T$ as
+$$\y_T  = (\yl, \yu) \text{,}$$
+where $\yl=\{y_t\}_{t\in \L}$ (resp. $\yu=\{y_t\}_{t\in \U}$) denotes the observed (resp. the unobserved) labels (so $\L$ (resp. $\U$) denotes the time index of observed (resp. unobserved) labels) we now look for estimating
+$\theta$ from  $(\x_T,\yl)$, and next
+computing, for all $t \in \U$,
+$$p(y_t|\x_T,\yl)=\frac{\sum_{y_s \text{, }  s \in \U \backslash \{t\}} \int p(\y_T,\x_T,\z_T) {\rm d}\z_T  } { \sum_{y_s \text{, }  s \in \U} \int p(\y_T,\x_T,\z_T) {\rm d}\z_T} \text{.}$$
 
 
-Partially labeled sequential data presents a challenging problem for machine 
-learning algorithms XX because they need to leverage both the labeled and 
-unlabeled parts of the data to learn a good model. 
-This problem is known as semi-supervised learning, and it has been studied 
-extensively in the machine learning community,  it can be handle using
-different techniques XXX.
+%In such cases, we only have at
+%our disposal  partially labeled sequential data.
+%This problem is particularly challenging because 
+%the generative model has to be chosen in such a way that its estimation
+%remains possible by only taking into account 
+
+%Partially labeled sequential data presents a challenging problem for machine 
+%learning algorithms XX because they need to leverage both the labeled and 
+%unlabeled parts of the data to learn a good model. 
+%This problem is known as semi-supervised learning, and it has been studied 
+%extensively in the machine learning community,  it can be handle using
+%different techniques XXX.
+
+
+
+
+%We now assume that we have at our disposal sequences with partially observed labels. Consequently, we now want to estimate the unobserved labels from the observations, but also from the observed labels, and we need to include this constraint in the learning of our generative model
+%$\p(\x_T,\y_T,\z_T)$ 
+
+%Sequential data is characterized by a temporal ordering of observations. 
+
+%Labeled sequential data is sequential data that is annotated with labels
+%that indicate the meaning or class of each observation.
+%These labels are essential for many applications, such as supervised classification, 
+%anomaly detection, and clustering.
+%However, i
+
+
+
 % transfer learning XX, 
 % graph-based methods XX,  generative models XX, among others.
-In particular, generative models are a popular approach for semi-supervised learning, 
-as they allow the incorporation of prior knowledge about the data distribution.
-In the case of sequential data, probabilistic generative models can be used to
-model the underlying distribution of the data and generate new samples,
-make predictions outcomes, and estimate missing or unobserved data. 
+%In particular, generative models are a popular approach for semi-supervised learning, 
+%as they allow the incorporation of prior knowledge about the data distribution.
+%In the case of sequential data, probabilistic generative models can be used to
+%model the underlying distribution of the data and generate new samples,
+%make predictions outcomes, and estimate missing or unobserved data. 
 
 
 
-One approach for semi-supervised learning is to design a latent variable 
-generative model, which can represent complex temporal relations, 
-and then propose a variational method for learning and inference XXX. 
-Some popular examples of generative models  include 
-Hidden Markov Chains (HMCs)~\cite{rabiner1989tutorial} and  Pairwise Markov
-Chains (PMCs) \cite{morales2021variational,wp-pami} which are used for modeling sequential data and 
-are based on latent variables.
-However, they have not been adapted to the case of partially labeled 
-sequential data... \observation{I'm not sure}. 
+% One approach for semi-supervised learning is to design a latent variable 
+%  generative model, which can represent complex temporal relations, 
+%  and then propose a variational method for learning and inference XXX. 
 
-In this article, we proposea more general generative model called 
-Triplet Markov Chain (TMC)~\cite{wp-cras-chaines3,pieczynski2005triplet} 
+% Among popular generative models, we are interested in those based on latent variables.
 
+% Some popular examples of generative models  include 
+% Hidden Markov Chains (HMCs) XXX and  Pairwise Markov
+% Chains (PMCs) xxour articlexx which are used for modeling sequential data and 
+% are based on latent variables.
 
+% However, they have not been adapted to the case of partially labeled 
+% sequential data \katy{I'm not sure}. 
+
+% In this article, we propose a general generative model for partially 
+% labeled sequential data.
+
+% Hidden Markov Chain (HMC) \cite{rabiner1989tutorial}.
 %  In a HMC, the sequence  $\z_T$ is a Markov chain and given $\z_T$, 
 %  the observations $x_t$ are independent 
 % and , given on $\Z_T$, the distribution of $x_t$ only depends 
@@ -219,36 +278,54 @@ Triplet Markov Chain (TMC)~\cite{wp-cras-chaines3,pieczynski2005triplet}
 % In other words, $\p(\z_K,\x_K)$ satisfies
 % \begin{equation}
 % \label{hmc}
-%  \p(\z_T,\x_T)=\p(z_0)\prod_{t=1}^T \p(z_t|z_{t-1}) \prod_{t=0}^T \p(x_t|z_{t}) \text{,} 
+%  \p(\z_T,\x_T)=\p(z_0)\prod_{k=1}^K \p(z_k|z_{k-1}) \prod_{k=0}^K \p(x_k|z_{k}) \text{,} 
 % \end{equation}
 
 
-% Ideas
-%  The introduction of a continuous latent process $\z_T$ is interesting from a modeling point of view
 
 \subsection{Scope of the paper}
+In this paper, we show that it is possible 
+to propose a very general framework 
+for semi-supervised learning in sequential generative 
+models. In particular, we show that it is sufficient
+to consider a generative model in which 
+the triplet process $\{z_t,x_t,y_t\}_{t \geq 0}$ is Markovian.
+As we will see later, such a general generative
+model encompasses well known generative
+models such that the Variational Sequential Labeler 
+(VSL)~\cite{chen2019variational} or the Semi-supervised Variational Recurrent Neural Network (SVRNN)~\cite{butepage2019predicting}. Due to this general interpretation, 
+we are able to propose new generative models which outperform
+the previous ones for some semi-supervised learning tasks. The estimation 
+of these general models is based on an adaptation of the
+variational Bayesian framework~\cite{Jordan99anintroduction} for sequential and partially 
+observed data.
 
-Since  only a subset of the observations has corresponding labels,  
-the sequence of labels can be expressed as  $\y_T  = \yl \cup \yu$,  
-where  $\yl = \{y_t\}_{t\in \L}$  and $\yu = \{y_t\}_{t\in \U}$ are the sets
-of observed labels and unobserved (hidden) labels, respectively; and $\mathcal{L}$ and 
-$\mathcal{U}$ are the set of labeled and unlabeled time steps, respectively. 
+The paper is organised as follows. In section \ref{sec:background}, we
+recall the general triplet Markov chain (TMC) model \cite{wp-cras-chaines3,pieczynski2005triplet} and the principle of variational inference. In section \ref{sec:vi_tmc}, we show that our previous general models can be estimated with modified variational inference techniques in the context of semi-supervised learning. We next show that this general inference technique encompasses popular semi-supervised learning algorithms and we propose our Deep TMC 
+model. Finally, in section \ref{sec:simulation}, we compare different approaches for the image segmentation problem. %We end the paper with a conclusion. 
+
+
+%Since  only a subset of the observations has corresponding labels,  
+%the sequence of labels can be expressed as  $\y_T  = \yl \cup \yu$, 
+%where  $\yl = \{y_t\}_{t\in \L}$  and $\yu = \{y_t\}_{t\in \U}$ are the sets
+%of observed labels and unobserved (hidden) labels, respectively; and $\mathcal{L}$ and 
+%$\mathcal{U}$ are the set of labeled and unlabeled time steps, respectively. 
 
 
 
-In this article, our interest is to present a general generative model for 
-semi-supervised learning,  based on latent r.v. which is defined by a joint 
-distribution $\p(\x_T, \y_T, \z_T)$ and provides learning from the observations 
-$\x_T$ and the observed labels $\yl$,  since the distribution reads 
+%In this article, our interest is to present a general generative model for 
+%semi-supervised learning,  based on latent r.v. which is defined by a joint 
+%distribution $\p(\x_T, \y_T, \z_T)$ and provides learning from the observations 
+%$\x_T$ and the observed labels $\yl$,  since the distribution reads 
 
-\begin{align}
-    \label{eq:jointTMC}
-    \p(\x_T, \yl) =  \sum_{y_t\in \yu} \int  \p(\x_T, \y_T,\z_T) {\rm d}\z_T \text{.}
-\end{align}
+%\begin{align}
+%    \label{eq:jointTMC}
+%    \p(\x_T, \yl) =  \sum_{y_t\in \yu} \int  \p(\x_T, \y_T,\z_T) {\rm d}\z_T \text{.}
+%\end{align}
 
-Our model is based on the TMC \cite{wp-cras-chaines3,pieczynski2005triplet} which
-relies on the assumption that the  triplet $(z_t, y_t, x_t)_{t \geq 0}$ 
-is a Markov chain with transition $p(z_t, y_t, x_t|z_{t-1},y_{t-1},x_{t-1})$.
+%Our model is based on the TMC \cite{wp-cras-chaines3,pieczynski2005triplet} which
+%relies on the assumption that the  triplet $(z_t, y_t, x_t)_{t \geq 0}$ 
+%is a Markov chain with transition $p(z_t, y_t, x_t|z_{t-1},y_{t-1},x_{t-1})$.
 
 
 % First, $(\x_T, \y_T, \z_T)$ are described by a parameterized distribution
@@ -260,106 +337,199 @@ is a Markov chain with transition $p(z_t, y_t, x_t|z_{t-1},y_{t-1},x_{t-1})$.
 
 
 
-\section{Proposed method}
-\label{sec:ourmethod}
-This section presents a review of variational Bayesian inference and its
-application to general Triplet Markov Chains for semi-supervised learning.
+\section{Background}
+\label{sec:background}
+This section introduces the TMC model and the principle of
+variational Bayesian inference techniques.
 
-\subsection{Background: Variational Inference}
+\subsection{Triplet Markov Chains}
+Let us first start with the pair process $\{x_t,y_t\}_{t \geq 0}$. 
+A popular model for describing this process is the hidden Markov chain model in which the sequences of label is assumed to be Markovian and the (noisy) observations are independent given the labels. In addition, the observation at a current time only depends 
+on the label at the same time. In other words,
+$$p(\x_T,\y_T)\overset{\rm HMC}{=}p(y_0)\prod_{t=1}^Tp(y_t|y_{t-1}) \prod_{t=0}^Tp(x_t|y_{t}) \text{.} $$
+However, this model may be poor in practice due
+to the Markovian assumption on the label. A simple way 
+to relax it is to consider the pairwise Markov chain (PMC) model in which the pair
+$\{x_t,y_t\}_{t \geq 0}$ is assumed to be Markovian,
+$$p(\x_T,\y_T)\overset{\rm PMC}{=}p(y_0,x_0)\prod_{t=1}^Tp(y_t,x_t|y_{t-1},x_{t-1}) \text{.} $$
+Even if this model is a direct generalization of the previous HMC model, it may be also unsatisfying in practice. The reason why is that it relies on the particular choice of the transition distribution $p(y_t,x_t|y_{t-1},x_{t-1})$ which may be difficult in practice. 
+A simple way to address this problem is
+to introduce a new latent process $\{z_t\}_{t \geq 0}$ which aims at making the previous distribution more robust. By denoting 
+$ v_t=(z_t,x_t,y_t) \text{,}$ the general TMC model satisfies 
+\begin{equation}
+\label{eq:tmc}
+p(\z_T,\x_T,\y_T)=p(\v_T)\overset{\rm TMC}{=}p(v_0)\prod_{t=1}^Tp(v_t|v_{t-1}) 
+\end{equation}
+and so, relies on the transition
+distribution 
+$$p(v_t|v_{t-1})=p(z_t,x_t,y_t|z_{t-1},x_{t-1},y_{t-1}) \text{.}$$
+It encompasses the previous PMC and HMC models and also leads to a general class of generative models. 
+%For example, it is possible to first describe the distribution of the latent variable, next that of the label given the latent variable and finally that of the noisy observation given the latent variable and the label, so the transition distribution reads
+For example, it is possible to first describe the distribution of the latent variable, then the one of the label given by the latent variable, and finally the one of the noisy observation given the latent variable and the label. In this case, the transition distribution reads as
+$$p(v_t|v_{t-1})=p(z_t|v_{t-1})p(y_t|z_t,v_{t-1}) p(x_t|y_t,z_t,v_{t-1}) \text{.}$$
+Even if the nature of the previous distributions is standard, the distribution
+of interest
+$$p(\x_T,\y_T)=\int p(\z_T,\x_T,\y_T) {\rm d}\z_T $$
+can be complex.
+In order to be used in practice,
+we have to first choose a parameterized
+transition distribution $\p(v_t|v_{t-1})$
+and then estimate the parameter $\theta$ from partially labelled observations. 
+This estimation step relies on the variational inference framework that we now recall.
+
+
+\subsection{Variational Bayesian Inference}
 \label{subsec:varinf}
-The aim is to estimate the parameter $\theta$ from a realization $\x_T$. 
-A popular estimate is the Maximum-Likelihood (ML) estimate 
-$\hat{\theta}=\argmax_{\theta} \p(\x_T)$
+In this section, we give up the temporal aspect of the problem and we only consider an observation $x$ and 
+a latent r.v. $z$; the distribution
+$\p(x,z)=p(z)p(x|z)$ is assumed to be known and we want to estimate
+$\theta$ from a realization $x$.
+A popular estimator is the Maximum-Likelihood (ML) estimate 
+$\hat{\theta}=\argmax_{\theta} \p(x)$
 due to its statistical properties \cite{White-MLE, Douc-ML-MIS}.
-However, a direct maximization of $\p(\x_T)$ is not always possible, particularly in
+However, a direct maximization of $\p(x)$ is not always possible, particularly in
 models with latent variables where the likelihood
-$\p(\x_T)=\int \p(\x_T,\z_T) {\rm d}\z_T$ may be not computable. 
+$\p(x)=\int \p(x,z) {\rm d}z$ is not computable. 
 % On the other hand, variational inference is a powerful tool for approximating 
 % complex posterior $\p(\z_T|\x_T)$ distributions in probabilistic models. 
 % Because the likelihood is not computable in the general case, 
 In the variational inference framework, a variational lower bound called evidence lower bound 
-(ELBO) on the log-likelihood  is optimized in order to estimate the parameters $\theta$.
+(ELBO) on the log-likelihood  is optimized in order to estimate the parameters $\theta$~\cite{Jordan99anintroduction}.
 This variational lower bound relies on the introduction of a parameterized 
-variational distribution $\q(\z_T|\x_T)$, which is parameterized by a set of parameters $\phi$, 
-and it is given by: 
-
-\vspace{-0.2cm}
+variational distribution $\q(z|x)$ which aims at mimicking the true posterior $\p(z|x)$ and which is parameterized by a set of parameters $\phi$;
+the ELBO reads
+%\vspace{-0.2cm}
 \begin{align}
-&\log(\p(\x_T)) \geq \Q(\theta,\phi) \text{,} \nonumber \\
+%&\log(\p(x)) \geq \Q(\theta,\phi) \text{,} \nonumber \\
 \label{eq:elbo}
-&\Q(\theta,\phi) = - \int \log \left(\frac{\q(\z_T|\x_T)}{\p(\x_T,\z_T)}\right) \q(\z_T|\x_T) {\rm d} \z_T \text{.}
+&\Q(\theta,\phi) = - \int \log \left(\frac{\q(z|x)}{\p(x,z)}\right) \q(z|x) {\rm d} z 
 \end{align}
-\vspace{-0.3cm}
-
-Equality holds if $\q(\z_T\x_T)= \p(\z_T|\x_T)$.
-When the posterior distribution $\p(\z_T|\x_T)$ is  computable, the alternating 
-maximization w.r.t. $\theta$ and $\q$  of the ELBO, $\Q(\theta,\phi)$,
+and satisfies, for all $(\theta,\phi)$
+$$\log(\p(x)) \geq \Q(\theta,\phi) \text{.} $$
+Equality holds if $\q(z|x)= \p(z|x)$.
+In this particular case, 
+the alternating  maximization w.r.t. $\theta$ and $\q$  of the ELBO, $\Q(\theta,\phi)$,
 coincides with the EM algorithm \cite{variational-EM}. 
 
 Variational inference consists in maximizing $Q(\theta,\phi)$ 
 with respect to $(\theta,\phi)$ for a given class of distributions $\q$. 
-The choice of the variational distribution $\q(\z_T|\x_T)$ is important; 
-$\q(\z_T|\x_T)$ should be close to $\p(\z_T|\x_T)$ but should also
-be chosen in a such way that the associated ELBO can be exactly computed or 
-easily approximated while remaining differentiable w.r.t. $(\theta,\phi)$. 
-A simple way to approximate $\Q(\theta,\phi)$ is by using the reparametrization 
-trick~\cite{kingma2013auto} which consists in chosing a parametric
-distribution $\q(\z_T|\x_T)$ such that a sample $\z_T^{(i)} \sim q(\z_T|\x_T)$ can
+The choice of the variational distribution $\q(z|x)$ is critical; 
+$\q(z|x)$  should be close to $\p(z|x)$ but should also
+be chosen in a such way that the associated ELBO can be exactly computed or easily approximated while remaining differentiable w.r.t. $(\theta,\phi)$. 
+A simple way to approximate $\Q(\theta,\phi)$ with a Monte Carlo method  is to use the reparametrization 
+trick~\cite{kingma2013auto} which consists in choosing a parametric
+distribution $\q(z|x)$ such that a sample $z^{(i)} \sim q(z|x)$ can
 be written as a differentiable function of $\phi$.
 
-It remains to choose a variational distribution $\q(\z_T|\x_T)$.
-One popular strategy is to use distributions from a mean-field variational 
-distribution which factorizes as  $\q(\z_T|\x_T)=q(z_0|\x_T) \prod_{t=1}^t
-\q(z_t|z_{0:t-1},\x_T)$.
+%It remains to choose a variational distribution $\q(\z_T|\x_T)$.
+%One popular strategy is to use distributions from a mean-field variational 
+%distribution which factorizes as  $\q(\z_T|\x_T)=q(z_0|\x_T) \prod_{t=1}^t
+%\q(z_t|z_{0:t-1},\x_T)$.
 
-\subsection{Semi-supervised Variational Inference for TMC}
-\label{subsec:vi_tmc}
+\section{Semi-supervised Variational Inference for TMCs}
+\label{sec:vi_tmc}
+% The TMC  is a direct generalization of PMC and HMC ...
+% In this article, we present the TMC as a generative model which will be used 
+% % \katy{Complete this paragraph}
+Let us now turn back to the TMC model \eqref{eq:tmc} described by a parameterized transition
+distribution
+$\p(v_t|v_{t-1})$.
 
-The TMC  is a direct generalization of PMC and HMC to the case where the
+\subsection{Variational inference}
 
-In this article, we present the TMC as a generative model which will be used 
-% \katy{Complete this paragraph}
+In order to estimate $\theta$ from 
+partially labelled observations 
+$(\x_T,\yl)$, we now want to maximize
+the likelihood 
+$$\p(\x_T, \yl)=\sum_{y_s \text{, }  s \in \U} \int \p(\z_T,\x_T,\y_T) {\rm d}\z_T$$
+which is not computable in the general case.
+We thus adapt the variational Bayesian
+framework of section \ref{subsec:varinf},
+where $x \leftarrow (\x_T, \yl)$ and
+$z \leftarrow (\z_T, \yu)$. 
 
-The distribution $p_{\theta}(\x_T, \y_T, \z_T)$ reads
+The ELBO \eqref{eq:elbo} now reads
 \begin{align}
-\label{eq:TMC}
-&p_{\theta}(z_0,y_0, x_0) \prod_{t=1}^T  p_{\theta}(z_t, y_t, x_t|z_{t-1},y_{t-1}, x_{t-1})   \text{.}
+\label{eq:elbo_seq}
+Q(\theta,\phi)&=  -  \sum_{y_s \text{, }  s \in \U} \int  \q(\z_T, \yu|\x_T, \yl) \times \nonumber \\  & \log \left(\frac{\q(\z_T,\yu  |\x_T,\yl)}{\p(\z_T,\x_T, \y_T)}\right)  {\rm d} \z_T \text{.}
 \end{align}
+%The distribution $p_{\theta}(\x_T, \y_T, \z_T)$ reads
+%\begin{align}
+\label{eq:TMC}
+%&p_{\theta}(z_0,y_0, x_0) \prod_{t=1}^T  p_{\theta}(z_t, y_t, x_t|z_{t-1},y_{t-1}, x_{t-1})   \text{.}
+%\end{align}
+Let us now discuss on the 
+computation of 
+\eqref{eq:elbo_seq}.
+First, it is worthwhile to remark 
+that it does not depend on the choice of the generative model: 
+any parameterized TMC model can be used since 
+$ \p(\z_T,\x_T, \y_T)$ is known.
+So its computation only depends
+on the choice of the variational
+distribution $\q(\z_T, \yu|\x_T, \yl)$. It can be factorized in two ways.
+For sake of clarity, we will omit
+the initial distribution of the variables at time $t=0$.
+The first factorization 
+coincides with 
+\begin{align}
+\label{eq:fact-1}
+\q(\z_T, \yu|\x_T, \yl)=& \prod_{t=1}^T  \q(z_t|\z_{t-1},\y_{t-1},\x_T,\y_{t+1:T}^{\L}) \times \nonumber \\ & \prod_{t \in \U }^T 
+\q(y_t|\y_{t-1},\z_t,\x_T,\y_{t+1:T}^{\L}) \text{,}
+\end{align}
+(remember that $\y_{t-1}=(\y_{t-1}^{\U},\y_{t-1}^{\L})$)
+while the second one coincides
+with 
+\begin{align}
+\label{eq:fact-2}
+\q(\z_T, \yu|\x_T, \yl)=& \prod_{t=1}^T  \q(z_t|\z_{t-1},\y_{t},\x_T,\y_{t+1:T}^{\L}) \times \nonumber \\ & \! \! \prod_{t \in \U }^T 
+\q(y_t|\y_{t-1},\z_{t-1},\x_T,\y_{t+1:T}^{\L}) \text{.}
+\end{align}
+As we explained in the previous section, the choice of the variational distribution depends on the generative model. In particular here, it has to take into account the factorization of the parameterized transition distribution $\p(v_t|v_{t-1})$.
 
+It remains to compute the ELBO \eqref{eq:elbo_seq} which is nothing more than expectation according to $\q(\z_T, \yu|\x_T, \yl)$.
+We thus propose to use a Monte-Carlo approximation based on the reparametrization trick in order
+to obtain a differentiable approximation $\hat{Q}(\theta,\phi)$ of $Q(\theta,\phi)$. 
+More precisely, we use the classical reparameterization trick to sample sequentially according to the continuous distribution $ q(z_t|\z_{t-1},\y_{t},\x_T,\y_{t+1:T}^{\L})$ (or 
+ $q(z_t|\z_{t-1},\y_{t},\x_T,\y_{t+1:T}^{\L})$, while
+ we use the Gumbel-Softmax (G-S) 
+trick~\cite{maddison2016concrete, jang2016categorical} to sample according to $q(y_t|$ $\y_{t-1},\z_t,\x_T,\y_{t+1:T}^{\L})$ (or
+$q(y_t|$ $\y_{t-1},\z_{t-1},\x_T,\y_{t+1:T}^{\L})$) since
+the labels are discrete.
 
-Since  only a subset of labels is observed $\yl$, the set of unobserved 
-labels $\yu$ is treated as latent variables and variational inference 
-involves finding a lower bound on the marginal likelihood of the observed data $\x_T$ and $\yl$.
-The variational lower bound is given by: 
+%Since  only a subset of labels is observed $\yl$, the set of unobserved 
+%labels $\yu$ is treated as latent variables and variational inference 
+%involves finding a lower bound on the marginal likelihood of the observed data $\x_T$ and $\yl$.
+%The variational lower bound is given by: 
 % So the latent variables $\z_T$ and $\yu$ are unobserved variables that are not 
 % directly measurable or observable, but are inferred from the observed data  $\x_T$ and $\yl$. 
-\begin{align}
-    \label{eq:elbo_semi_tmc}
-    \log(\p(\x_T, \yl) )   \geq  & -  \int \sum_{\yu}  \q(\z_T, \yu|\x_T, \yl) \times \nonumber \\ 
-    & \quad \quad  \log \left(\frac{\q(\z_T,\yu  |\x_T)}{\p(\z_T,\y_T, \x_T)}\right)  {\rm d} \z_T \nonumber \\
-    & =  Q(\theta,\phi) \text{,}  
-\end{align}
-where $\phi$ denotes the parameters of the variational distribution 
-$\q(\z_T,\yu|\x_T, \yl)$.
+%\begin{align}
+ %   \label{eq:elbo_semi_tmc}
+ %   \log(\p(\x_T, \yl) )   \geq  & -  \int \sum_{\yu}  \q(\z_T, \yu|\x_T, \yl) \times \nonumber \\ 
+ %   & \quad \quad  \log \left(\frac{\q(\z_T,\yu  |\x_T)}{\p(\z_T,\y_T, \x_T)}\right)  {\rm d} \z_T \nonumber \\
+ %   & =  Q(\theta,\phi) \text{,}  
+%\end{align}
+%where $\phi$ denotes the parameters of the variational distribution 
+%$\q(\z_T,\yu|\x_T, \yl)$.
 
-Since our model has both discrete and continuous latent variables, 
-the approximation of the ELBO in Eq.~\eqref{eq:elbo_semi_tmc} becomes more complex.
-To that end,  we can use the Gumbel-Softmax (G-S) 
-trick~\cite{maddison2016concrete, jang2016categorical} and the reparametrization
-trick~\cite{kingma2013auto} to approximate $Q(\theta,\phi)$ simustaneously.
-For the continuous latent variables $\z_T$, the reparametrization 
-trick introduced in section \ref{subsec:varinf} is still valid.
-On the other hand, for the discrete latent variables $\yu$, 
-the G-S trick enables to obtain a differentiable approximation to the discrete
-categorical distribution. 
+%Since our model has both discrete and continuous latent variables, 
+%the approximation of the ELBO in Eq.~\eqref{eq:elbo_semi_tmc} becomes more complex.
+%To that end,  we can use the Gumbel-Softmax (G-S) 
+%trick~\cite{maddison2016concrete, jang2016categorical} and the reparametrization
+%trick~\cite{kingma2013auto} to approximate $Q(\theta,\phi)$ simultaneously.
+%For the continuous latent variables $\z_T$, the reparametrization 
+%trick introduced in section \ref{subsec:varinf} is still valid.
+%On the other hand, for the discrete latent variables $\yu$, 
+%the G-S trick enables to obtain a differentiable approximation to the discrete
+%categorical distribution. 
 
-It remains to choose a factorization of the variational distribution
-$\q(\z_T, \yu| \x_T, \yl)$, which is a crucial step in variational inference.
-Different models can be obtained by choosing different factorizations 
-of the variational distribution, which will be discussed 
-in the next section \ref{subsec:particular_cases}. For example, we can first consider  
-$\q(\z_T, \yu| \x_T, \yl) =  \q(\z_T| \x_T, \y_T ) \q(\yu| \x_T, \yl )$ 
-and then consider a mean-field variational distribution.
+%It remains to choose a factorization of the variational distribution
+%$\q(\z_T, \yu| \x_T, \yl)$, which is a crucial step in variational inference.
+%Different models can be obtained by choosing different factorizations 
+%of the variational distribution, which will be discussed 
+%in the next section \ref{subsec:particular_cases}. For example, we can first consider  
+%$\q(\z_T, \yu| \x_T, \yl) =  \q(\z_T| \x_T, \y_T ) \q(\yu| \x_T, \yl )$ 
+%and then consider a mean-field variational distribution.
 
 
 
@@ -374,84 +544,105 @@ and then consider a mean-field variational distribution.
 % \katy{I think we should add a paragraph here to explain what we do in the case
 % of y is missing, we replace it by a sample .... }
 
-\subsection{Particular cases of the TMC}
+\subsection{Particular semi-supervised algorithms for TMCs}
 \label{subsec:particular_cases}
-The choice of the factorization of the transition distribution 
-$\p(z_t, y_t, x_t|z_{t-1},y_{t-1}, x_{t-1})$  has an impact on the
-performance of the model for a specific task (classification, prediction,
-detection or generation). 
-The goal of this section is to present particular cases of our proposed TMC model
-by choosing different factorizations of the transition and 
-variational distribution.
-For the sake of clarity, let us now denote the triplet $v_t=(x_t,z_t,y_t)$.
+As we have seen, semi-supervised algorithms for TMC depend on two key ingredients: the generative model described by the transition distribution $\p(v_t|v_{t-1})$ which
+has an impact on the
+performance of the model for a specific task (classification, prediction, detection, or generation),
+and the choice of the variational distribution $\q(\z_T, \yu|\x_T, \yl)$. Actually, our general framework encompasses two existing solutions and we propose a new one.
 
-\subsubsection{VSL}
-Variational Sequential Labelers model is a particular case of the TMC model
-where the transition distribution is factorized as follows:
+
+
+
+
+\subsubsection{Variational Sequential Labeler (VSL)}
+The VSL~\cite{chen2019variational} is a semi-supervised learning model for sequential data
+and it has originally been proposed for the sequence labeling tasks in natural language processing.
+It can be seen as a particular case of the general framework we derived in section \ref{sec:vi_tmc}.
+This particular setting coincides with 
 \begin{align}
 \label{eq:vsl}
-\p(v_t|v_{t-1}) \!= \!\p(y_t|z_t) \p(z_t|x_{t-1}, y_{t-1}) \p(x_t|z_t) \text{.}
+\p(v_t|v_{t-1}) \overset{\rm VSL}{=} \p(y_t|z_t) \p(z_t|x_{t-1}, z_{t-1}) \p(x_t|z_t) \text{,}
+\end{align}
+while the associated variational distribution
+satisfies factorization \eqref{eq:fact-1}
+with
+\begin{align}
+ \q(z_t|\z_{t-1},\y_{t-1},\x_T,\y_{t+1:T}^{\L})=\q(z_t|\x_T) \text{,} \\
+ \q(y_t|\y_{t-1},\z_t,\x_T,\y_{t+1:T}^{\L})=\p(y_t|z_t) \text{.}
+\end{align}
+%The variational distribution is given by
+%\begin{align*}  
+%\q(\z_T, \yu| \x_T, \yl) =& \prod_{t=0}^T \q(z_t| \x_T) \prod_{t\in  \U}  \q(y_t| z_t)
+%\end{align*}
+In this case, the ELBO \eqref{eq:elbo_seq} reduces to
+\begin{align}
+\label{eq:elbo_vsl}
+Q(\theta,\phi) \overset{\rm VSL}{=}& \sum_{t \in \L} \int \q(z_{t}| \x_T) \log\p(y_{t}|z_{t}) {\rm d} z_t + \nonumber \\
+&  \sum_{t=0}^T \int \q(z_{t}| \x_T) \Bigg[ \log \p(x_t|z_t) -\nonumber\\ 
+& \quad \quad  \log \left(\frac{\q(z_t|\x_T)}{p(z_t|x_{t-1}, z_{t-1} )} \right)  \Bigg]  {\rm d} z_t \text{.}
 \end{align}
 
-In the case of SVRNN, the chosen variational distribution
-$\q(\z_T, \yu| \x_T, \yl\!) \!=\!  \q(\z_T| \x_T, \yl\!) \q(\yu| \x_T, \z_T, \yl \!)$ 
-is given by
-\begin{align*}  
-    \q(\z_T| \x_T, \yl ) =& \prod_{t=0}^T \q(z_t| \x_T) \\
-    \q(\yu| \x_T, \z_T, \yl ) =& \prod_{t\in  \U}  \q(y_t| z_t)
-\end{align*}
- 
-In particular, VLS considers $\q(y_t| z_t) =  \p(y_t| z_t)$.
 
-\subsubsection{SVRNN}
-A Semi-supervised Variational Recurrent Neural Network can be seen as an adapted
-version of the TMC model where the latent variable $z_t$ is set as
- $(z'_t, h_t)$. The variable $z'_t$ is a stochastic latent variable 
-and $h_t$ is deterministically given by $h_t = f_{\theta}(x_t, y_t, z'_t)$, 
-where $f_{\theta}$ is a deterministic non-linear transition function. 
-In ths case, the transition distribution is factorized as follows:
+It can be observed that it consists of two terms and that the previous assumptions enable to 
+interpret it as an expectation according to $\q(\z_T|\x_T)$. Thus, it is not necessary to sample discrete variables according to the G-S trick. Moreover, a regularization term $\beta$ can be introduced in the second part of the ELBO in 
+order to encourage good performance on labeled data while leveraging the context of the noisy image during reconstruction.
+While this model simplifies the inference, it should be noted that in the generative process, the observation $x_t$ is conditionally independent of its associated label and may not
+be adapted to some applications.
+
+%Moreover, the VSL simplifies the ELBO by setting $\q(y_t| z_t) = \p(y_t| z_t)$, which enables the use of classical variational inference with only continuous latent variables. To further improve performance, they also introduce a regularization term into the loss function that encourages good performance on labeled data while leveraging the context of the noisy image during reconstruction. 
+
+\subsubsection{ Semi-supervised Variational Recurrent Neural Network (SVRNN)}
+\label{sec:svrnn}
+The generative model used in the SVRNN can also be seen a particular version of the TMC model where the latent variable
+$z_t$ consists of the pair $z_t=(z'_t, h_t)$. The associated
+transition distribution reads:
 \begin{align}
 \label{eq:svrnn}
-\p(v_t|v_{t-1}\!) \!= \!\p(y_t|v_{t-1}\!) \p(z_t|y_t,\! v_{t-1}\!) \p(x_t|y_t,z_t,\!v_{t-1}\!) \text{.}
+\!\!\!\!\!\!\! \p(v_t|v_{t-1}\!) \!= \!\p(y_t|v_{t-1}\!) \p(z_t|y_t,\! v_{t-1}\!) \p(x_t|y_t,z_t,\!v_{t-1}\!) \text{,}
 \end{align}
+where 
+\begin{eqnarray*}
+\p(y_t|v_{t-1}\!)&=& \p(y_t|h_{t-1})\text{,} \\
+\p(z_t|y_t,v_{t-1})&=&\!\delta_{f_{\theta}(z'_t,y_t,x_t,h_{t-1})}(h_t) \!\!\times \!\p(z'_t|y_t, h_{t-1}) \text{,} \\
+\p(x_t|y_t,z_t,\!v_{t-1}\!)&=& \p(x_t|y_t, z'_t, h_{t-1}) \text{,}
+\end{eqnarray*}
+and where $f_{\theta}$ is a deterministic 
+function parameterized by a Recurrent Neural Network (RNN), for example.
 
-On the other hand, the chosen variational distribution 
-$\q(\z_T, \yu| \x_T, \yl) =  \q(\z_T| \x_T, \y_T ) \q(\yu| \x_T, \yl )$  
-factorizes as follows:
+%Their latent variable
+%$z_t$ consists of the pair $(z'_t, h_t)$, where the variable $z'_t$ is a stochastic latent variable 
+%and $h_t$ is deterministically given by $h_t = f_{\theta}(x_t, y_t, z'_t)$, 
+%where $f_{\theta}$ is a deterministic non-linear transition function. 
+On the other hand, the variational distribution $\q(\z_T, \yu|$ $ \x_T, \yl)$ satisfies
+the factorization \eqref{eq:fact-2}
+with
 \begin{align*}
-\q(\z_T| \x_T, \y_T ) =&  \q(z_0|\x_t, \y_t) \prod_{t=1}^T \q(z_t|\z_{t-1},\x_t, \y_t)  \\
-\q(\yu| \x_T, \yl )=& \prod_{t\in  \U} \q(y_t|\y_{t-1}, \x_t) \text{,}
-%\prod_{t\in  \U} \q(y_t|\y_{<t}, \x_t, \y_t) \text{,}
+ q(z'_t|\z_{t-1},\y_{t},\x_T,\y_{t+1:T}^{\L})=  \q(z'_t| x_t, y_t, h_{t-1})\text{,} \\
+q(y_t|\y_{t-1},\z_{t-1},\x_T,\y_{t+1:T}^{\L})= \q(y_t| x_t, h_{t-1}) \text{,}
 \end{align*}
+but their final ELBO does not
+coincide with \eqref{eq:elbo_seq}. 
+The reason why is that they derive it from the static case and add a penalization term that encourages $\p(y_t|v_{t-1})$ and $\q(y_t| x_t, h_{t-1})$ to be close to the empirical distribution of the data.
+
+
+%$=  \q(\z_T| \x_T, \y_T ) \q(\yu| \x_T, \yl )$  
+%factorizes as follows:
+%\begin{align*}
+%\q(\z_T, \yu| \x_T, \yl) =&  \q(z_0|\x_t, \y_t) \prod_{t=1}^T \q(z_t|\z_{t-1},\x_t, \y_t)  \times \\
+%& \quad \prod_{t\in  \U} \q(y_t|\y_{t-1},\z_{t-1}, \x_t) \text{,}
+%\end{align*}
 % where $\y_{<t}$ refers to the set of unobserved labels with an index
 % $t'\in  \U$  which satisfies $t'<t$.  
+%This model incorporates an additional term in the loss function that encourages  $\p(y_t|v_{t-1})$ and $\q(y_t| x_t, h_{t-1})$  to follow the data distribution over $y_t$. %For $t \in \L$, we have
 
+%\begin{align*}
+%    J_t(\theta,\phi) = &   \E_{\bar{p}(x_t, y_t)} \left[\log \left( \p(y_t|v_{t-1})\q(y_t|\y_{t-1}, \z_{t-1}, \x_t) \right)  \right]\text{,}
+%\end{align*}
+%where $\bar{p}$ denotes the empirical distribution. 
 
-
-\subsubsection{mTMC}
-Finally, we present the minimal TMC which  is a particular case of 
-the TMC model  presented in~\cite{gangloff2023deep}
-where 
-the transition distribution is factorized as follows:
-\begin{align}
-    \label{eq:mTMC}
-    \p(v_t|v_{t-1}) \!= \!\p(y_t|y_{t-1}) \p(z_t|z_{t-1}) \p(x_t|t_t,z_t) \text{.}
-\end{align}
-The variational distribution is chosen as in the SVRNN model.
-\begin{align*}
-    \q(\z_T| \x_T, \y_T ) =&  \q(z_0|\x_t, \y_t) \prod_{t=1}^T \q(z_t|\z_{t-1},\x_t, \y_t)  \\
-    \q(\yu| \x_T, \yl )=& \prod_{t\in  \U} \q(y_t|\y_{t-1}, \x_t) \text{,}
-\end{align*}
-
-\section{Simulations}
-\label{sec:simulation}
-In this section, we present the results of the proposed models on
-semi-supervised binary image segmentation. Our goal is to recover the segmentation of a binary image 
-($\Omega=\{\omega_1,\omega_2\}$) from the noisy observations
-$\x_T$ when a partially segmentation $\yl$ is available.
-
-\subsection{Deep TMCs}
-\label{subsec:deepTMC}
+\subsubsection{Deep TMCs}
+We finally present a very general TMC model from which one can apply any of the previous techniques.
 The set of parameters $(\theta, \phi)$  
 %of the generating  and the variational distribution 
 can be described by any differentiable flexible function $\psi(\cdot)$. 
@@ -464,218 +655,287 @@ distributions, we consider a general notation
 $\p(x_t | \cdot)$, $\p(z_t| \cdot)$ and $\p(y_t | \cdot)$ 
 (resp. $\q(y_t | \cdot)$, $\q(z_t | \cdot)$) 
 in order to avoid presenting a specific dependence between variables. 
-These dependencies are specified for each model and are presented in the previous
-Section~\ref{subsec:particular_cases}.
+These dependencies are specified for each model and are presented in the previous sections.
+
+Let $\zeta(y_t; \cdot )$ and $ \varsigma(y_t;\cdot)$  (resp. $\lambda(x_t; \cdot )$; and $\eta(z_t;\cdot)$, $\tau(z_t;\cdot)$) 
+be two probability distributions on $\Omega$
+(resp. probability density functions on $\mathbb{R}^{d_x}$; and  $\mathbb{R}^{d_z}$ ).
 The general model is described by:
 \begin{align}
-    \p(v_t|v_{t-1}) &=  \p(x_t|\cdot) \p(z_t|\cdot)\p(y_t|\cdot) \nonumber\\
+    \p(v_t|v_{t-1}) &=  \p(x_t|\cdot) \p(z_t|\cdot)\p(y_t|\cdot) \text{,} \nonumber\\
 \label{eq:px}
-    \p(x_t | \cdot) &= \N(x_t; \mu_{px, t}, {\rm diag}(\sigma_{px,t}) ) \\
+    \p(x_t | \cdot) &= \lambda(x_t; \psi_{px}(\cdot) ) \text{,}\\
 \label{eq:pz}
-    \p(z_t | \cdot) &= \N(x_t; \mu_{pz, t}, {\rm diag}(\sigma_{pz,t}) ) \\
+    \p(z_t | \cdot) &= \eta(z_t; \psi_{pz}(\cdot) ) \text{,}\\
 \label{eq:py}
-    \p(y_t | \cdot) &= \Ber(y_t;  \rho_{py,t}) \text{,}
+    \p(y_t | \cdot) &= \zeta(y_t;  \psi_{py}(\cdot)) \text{,}
 \end{align}
-where ${\rm diag(.)}$ denotes the diagonal matrix deduced from the values 
-of $\sigma_{\cdot,t}$;   $[\mu_{\cdot,t}, \sigma_{\cdot,t}]$  and $\rho_{\cdot,t}$ denote 
-the parameters of the Gaussian and Bernoulli distributions, respectively. 
+(remember that $\psi_{px}(\cdot)$ denotes the parameters
+of the distribution $\p(x_t | \cdot)$ and can depend 
+on $v_{t-1}$ or $(v_{t-1},z_t,y_t)$ or $(v_{t-1},y_t)$, etc... according to the original factorization of $\p(v_t|v_{t-1})$). 
 Finally, the variational distribution is given by
 \begin{align}
 \label{eq:qz}
-    \q(z_t | \cdot) &=  \N(z_t; \mu_{qz, t}, {\rm diag}(\sigma_{qz,t}) )\\  
+    \q(z_t | \cdot) &=  \tau(z_t; \psi_{qz}(\cdot)) \text{,}\\
 \label{eq:qy}
-    \q(y_t | \cdot) &=  \Ber(y_t;  \rho_{qy,t}) \text{,} 
+    \q(y_t | \cdot) &=  \varsigma(y_t;  \psi_{qy}(\cdot)) \text{.}
 \end{align}
+The parameters $\theta$ (resp. $\phi$) are derived from 
+neural networks $(\psi_{px}, \psi_{pz}, \psi_{py})$ (resp.
+$(\psi_{qz}, \psi_{qy})$).
+Note that in the VLS model, $\psi_{qy}$ is not longer needed since 
+the assumption $\q(y_t | z_t) = \p(y_t | z_t)$ is made.
 
-The parameters $\theta = \{\mu_{pz,t}, \sigma_{pz,t}, \mu_{px,t}, \sigma_{px,t}, \rho_{py,t}\}$  
-and $\phi = \{ \mu_{qz,t}, \sigma_{qz,t} , \rho_{qy,t}\}$ are derived from 
-neural networks $(\psi_{px}, \psi_{pz}, \psi_{py})$ and 
-$(\psi_{qz}, \psi_{qy})$, respectively.
-Note that in the VLS model $\phi = \{ \mu_{qz,t}, \sigma_{qz,t} \}$ since 
-the assumption $\q(y_t | z_t) = \p(y_t | z_t)$ is made. 
-% \begin{example}
-For example, we can consider the deep mTMC model where the parameters are given by:
+\section{Simulations}
+\label{sec:simulation}
+In this section, we present the results of the proposed models on
+semi-supervised binary image segmentation. Our goal is to recover the segmentation of a binary image 
+($\Omega=\{\omega_1,\omega_2\}$) from the noisy observations
+$\x_T$ when a partially segmentation $\yl$ is available.
+
+In particular, $\zeta(y_t; \cdot )$ (resp. $\varsigma(y_t;\cdot)$) is set  as a Bernoulli distribution with parameters $\rho_{py,t}$ (resp. $\rho_{qy,t}$). 
+As for the distribution  $\lambda(x_t; \cdot )$ (resp. $\eta(z_t;\cdot)$ and  $\tau(z_t;\cdot)$), we set it as a Gaussian distribution with parameters $[ \mu_{px,t}, {\rm diag}(\sigma_{px,t})]$ (resp.  $[ \mu_{pz,t}, {\rm diag}(\sigma_{pz,t})]$ and $[ \mu_{qz,t}, {\rm diag}(\sigma_{qz,t})]$).
+% \begin{align*}
+%     \p(v_t|v_{t-1}) &=  \p(x_t|\cdot) \p(z_t|\cdot)\p(y_t|\cdot) \nonumber\\
+%     \p(x_t | \cdot) &= \N(x_t; \mu_{px, t}, {\rm diag}(\sigma_{px,t}) ) \\
+%     \p(z_t | \cdot) &= \N(x_t; \mu_{pz, t}, {\rm diag}(\sigma_{pz,t}) ) \\
+%     \p(y_t | \cdot) &= \Ber(y_t;  \rho_{py,t}) \text{,}
+% \end{align*}
+where ${\rm diag(.)}$ denotes the diagonal matrix deduced from the values 
+of $\sigma_{\cdot,t}$.
+% and the parameters are $\theta = \{\mu_{pz,t}, \sigma_{pz,t}, \mu_{px,t}, \sigma_{px,t}, \rho_{py,t}\}$  
+% and $\phi = \{ \mu_{qz,t}, \sigma_{qz,t} , \rho_{qy,t}\}$.
+
+\subsection{Deep mTMC}
+
+In our simulations, we consider a particular case of the deep TMC model,
+referred to as the deep minimal TMC (d-mTMC), where the choice of parameters describes the transition:
+\begin{align}
+    \label{eq:mTMC}
+    \p(v_t|v_{t-1}) \!\overset{\rm mTMC}{=} \!\p(y_t|y_{t-1}) \p(z_t|z_{t-1}) \p(x_t|y_t,z_t) \text{.}
+\end{align}
+So this model assumes a Markovian distribution 
+for the labels and the latent variables aims at 
+learning the distribution of the noise given the label.  %which we use for comparison with the VLS and SVRNN models
+In order to capture temporal dependencies in the input data and to have an efficient computation of the variational distribution for the d-mTMC model, we use a deterministic function to generate $\tilde{h}_t$ which  
+takes as input $(x_t, y_t, z_t, \tilde{h}_{t-1})$. 
+Then the variational distribution $\q(\z_T, \yu|$ $ \x_T, \yl)$ satisfies the factorization \eqref{eq:fact-2}
+with $\q(z_t|x_t, y_t,\tilde{h}_{t-1} )$ and $\q(y_t|x_t, \tilde{h}_{t-1})$. 
+
+In this case, the parameters are given by:
 \begin{align*}
-% \label{eq:d1}
-    &[\mu_{px,t}, \sigma_{px,t}]  = \psi_{px}(y_t, z_t)\\
-% \label{eq:d2}
-    &[\mu_{qz,t}, \sigma_{qz,t}] = \psi_{qz}( \z_{t-1},\x_t, \y_t )\text{, }\\
-% \label{eq:d3}
+    &[\mu_{px,t}, \sigma_{px,t}]  = \psi_{px}(y_t, z_t),\\
     &[\mu_{pz,t}, \sigma_{pz,t}]  = \psi_{pz }(z_{t-1}), \\
-% \label{eq:d4}
-    &\rho_{py,t}  = \psi_{px}(y_{t-1})\\
-% \label{eq:d5}
-    &\rho_{qy,t}  = \psi_{qy}(\y_{t-1}, \x_t) \text{.}
+    &\rho_{py,t}  = \psi_{px}(y_{t-1}),\\
+     &[\mu_{qz,t}, \sigma_{qz,t}] = \psi_{qz}( x_t, y_t,\tilde{h}_{t-1})\text{, }\\
+    &\rho_{qy,t}  = \psi_{qy}( x_t, \tilde{h}_{t-1}) \text{.}
 \end{align*} 
 
+% given in~\cite{butepage2019predicting}
+%\subsubsection{mTMC}
+%Finally, we present the minimal TMC which  is a particular case of 
+%the TMC model  presented in~\cite{gangloff2023deep}
+%where 
+%the transition distribution is %factorized as follows:
+%\begin{align}
+ %   \label{eq:mTMC}
+ %   \p(v_t|v_{t-1}) \!= \!\p(y_t|y_{t-1}) \p(z_t|z_{t-1}) \p(x_t|t_t,z_t) \text{.}
+%\end{align}
+%The variational distribution is chosen as in the SVRNN model.
 
-% \end{example}
 
 
-% \katy{Explicar la incorporacion de $h_t$ en el modelo SVRNN y como fue configurada
-% en los otros modelos.}
+% \subsection{Deep TMCs}
+%\label{subsec:deepTMC}
+
 
 \subsection{Experiments settings}
-We consider the cattle-type and the camel-type images of the 
-Binary Shape Database~\cite{binaryimg}.
-The images are transformed into a $1$-D signal $\x_T$ with a Hilbert-Peano 
-filling curve~\cite{sagan2012space}. 
-They are next blurred with non-linear noises %($x_t|y_t,z_t$)
-to highlight the ability, of the models presented
-in Section~\ref{subsec:particular_cases}, to learn such a signal corruption.
-In fact, the cattle-type image is blurred with a general stationary noise and 
-the camel-type image is blurred with a stationary multiplicative noise 
-(more details about generation are given in ~\cite{gangloff2023deep}).
-On the other hand, the pixels $y_t \in \yl$ are randomly chosen. 
-In particular, we consider that $60\%$ of pixels are labeled, 
-the rest of pixels are considered as unobserved.
+We used the Binary Shape Database~\cite{binaryimg} and focused 
+on both \textit{cattle}-type and \textit{camel}-type images. 
+To transform these images into a $1$-D signal ( $\x_T$ ), we used a Hilbert-Peano filling curve~\cite{sagan2012space}. 
+To evaluate the models presented in Section~\ref{subsec:particular_cases},
+we introduced non-linear blurring to highlight their ability to learn and
+correct for signal corruption. 
+% Specifically, we applied general stationary noise (resp. stationary multiplicative noise)  
+% to the \textit{cattle}-type (resp. \textit{camel}-type) image. 
+More precisely, we generated an artificial noise for the \textit{cattle}-type by
+generating $x_t$ according to
+\begin{equation}
+    \label{eq:noise_eq1}
+    x_t| y_{t},x_{t-1} \sim \mathcal{N}\Big(\sin(a_{y_t}+x_{t-1});
+    \sigma^2\Big),
+\end{equation}
+where $a_{\omega_1}=0$ , $a_{\omega_2} = 0.4$ and $\sigma^2=0.25$. 
+% The generated image is shown in Fig.\ref{fig:res_cow40}(a).
+We now consider the \textit{camel}-type image which is corrupted 
+with a stationary multiplicative noise (non-elementary noise) given by
+\begin{equation}
+\label{eq:noise_eq2}
+    x_t|y_t,z_t \sim\mathcal{N}\left(a_{y_t};b_{t_t}^2\right) * z_t,
+\end{equation}
+where $z_t\sim\mathcal{N}(0, 1)$, $a_{\omega_1}=0\text{, } a_{\omega_2} = 0.5$ and $b_{\omega_1}=b_{\omega_2}=0.2$. 
+
+The generated images are presented in Fig.\ref{fig:res_cow40}(a) 
+and Fig.\ref{fig:res_camel60}(a), respectively. 
+More details about the image generation process are
+available in~\cite{gangloff2023deep}. Additionally, we randomly selected
+pixels $y_t \in \yl$, with a percentage of the pixels being labeled and the rest considered unobserved (\textit{e.g.} Fig.\ref{fig:res_cow40}(c) 
+and Fig.\ref{fig:res_camel60}(c) ). %(\textit{e.g.} $40\%$ or $60\%$).
+
+Each model was trained using stochastic gradient descent to optimize the negative associated ELBO, with the Adam optimizer~\cite{adam}. The neural networks $\psi_{(\cdot)}$'s were designed with two hidden layers using rectified linear units and appropriate outputs, such as linear, softplus, and sigmoid. To ensure a fair comparison, we matched the total number of parameters of all models to be approximately equal. As a result, the number of hidden units for each hidden layer differs for each model. In fact, the SVRNN, mTMC, and VLS models have 22, 25, and 41 hidden units, respectively.
+We used an RNN cell to generate $\tilde{h}_t$ (resp. $h_t$) for the d-mTMC (resp. SVRNN) model. In the VLS model, we used the parameterization approach for $\q(z_t|\x_T)$ presented in~\cite{chen2019variational}, which involves using a bi-directional RNN cell. We also set the regularization term to $0,1$.
 
 
-
-Each model was trained with stochastic gradient descent on the negative
-associated ELBO using the Adam optimizer \cite{adam}. 
-For each model,  $\psi_{\cdot}$ have two hidden layers using rectified linear units, 
-with appropriate outputs (linear,  softplus and sigmoid).
-Additionally, we match the total number of parameters of all models 
-to be equal or close between them, so the number of hidden 
-units, for each hidden layer, is different for each model.  
-The SVRNN (resp. mTMC and VLS ) model 
-has 22 (resp. 25  and 41) hidden units. 
-% The SVRNN also considers a number
-% of hidden units for the deterministic part of the model and it is equal to $XX$.
-
-
-
+% In addition, we also added a penalization term used in the SVRNN, which was presented in section~\ref{sec:svrnn}.
 \subsection{Results}
 \label{subsec:results}
 The performance of the models is evaluated in terms of
-the error rate (ER) of the reconstruction of the unobserved pixels. 
+the error rate (ER) of the reconstruction of the unobserved pixels.  
+Table~\ref{tab:error_rates} presents the error rates obtained for reconstructing unobserved pixels on different images. The notation \textit{image $\%$} is used to indicate the specific image and the percentage of unobserved labels in the image. 
+As shown in the table, the d-mTMC consistently outperforms the VSL and the SVRNN, achieving a lower error rate for each case. 
 
-% Below is an example of how to insert images. Delete the ``\vspace'' line,
-% uncomment the preceding line ``\centerline...'' and replace ``imageX.ps''
-% with a suitable PostScript file name.
-% -------------------------------------------------------------------------
-\begin{figure}[htb]
-    \begin{minipage}[b]{0.30\linewidth}
-      \centering
-      \centerline{\includegraphics[width=\textwidth, cfbox=black 1pt 0pt]{ress/camel40/camel40.png}}
-    %  \vspace{2.0cm}
-      \centerline{Noisy image}\medskip
-    \end{minipage}
-    \hfill
-    \begin{minipage}[b]{.30\linewidth}
-      \centering
-      \centerline{\includegraphics[width=\textwidth, cfbox=black 1pt 0pt]{ress/camel40/camel40_label.png}}
-    %  \vspace{1.5cm}
-      \centerline{100\% labeled }\medskip
-    \end{minipage}
-    \hfill
-    \begin{minipage}[b]{0.30\linewidth}
-      \centering
-      \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel40/camel40_miss.png}}
-    %  \vspace{1.5cm}
-      \centerline{60\% labeled }\medskip
-    \end{minipage}
-    \\
-    \begin{minipage}[b]{0.30\linewidth}
-        \centering
-        \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel40/camel40_vsl.png}}
-      %  \vspace{2.0cm}
-        \centerline{VLS (41.84\%)}\medskip      \end{minipage}
-      \hfill
-      \begin{minipage}[b]{.30\linewidth}
-        \centering
-        \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel40/camel40_svrnn_2.png}}
-      %  \vspace{1.5cm}
-        \centerline{SVRNN (12.12\%)}\medskip
-      \end{minipage}
-      \hfill
-      \begin{minipage}[b]{0.30\linewidth}
-        \centering
-        \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel40/camel40_tmm_3.png}}
-      %  \vspace{1.5cm}
-        \centerline{mTMC (2.60\%)}\medskip
-      \end{minipage}
-    %
-    \caption{Semi-supervised image segmentation with TMC models. }
-    \label{fig:res_camel40}
-\end{figure}
- 
+Additionally, we observe that when dealing with elementary noise, the performance of the VLS model is superior to that of SVRNN. However, this capability is lost as we increase the percentage of unobserved labels, even with elementary noise.
+\begin{table}[htb]
+\centering
+\begin{tabular}{l|r|r|l|}
+\cline{2-4}
+                            & \multicolumn{1}{l|}{\textit{Cattle} $40\%$} & \multicolumn{1}{l|}{\textit{Camel} $40\%$} & \textit{Camel} $60\%$                      \\ \hline
+\multicolumn{1}{|l|}{VSL}   & 15,64\%                    & 41,84\%                      & \multicolumn{1}{r|}{41,80\%} \\ \hline
+\multicolumn{1}{|l|}{SVRNN} & 16,55\%                    & 12,12\%                      & \multicolumn{1}{r|}{  21,38\%}                            \\ \hline
+\multicolumn{1}{|l|}{d-mTMM}   & \textbf{1,93}\%                     &\textbf{ 2,60}\%                       & \multicolumn{1}{r|}{\textbf{3,62}\%}  \\ \hline
+\end{tabular}
+\caption{Error rates of the reconstruction of the unobserved pixels on different images with different percentages of unobserved pixels.}
+\label{tab:error_rates}
+\end{table}
 
-
+Moreover, our algorithm achieves superior performance with a more complex noise (the \textit{camel}-type image).
+Fig. \ref{fig:res_camel60} displays the performance of our proposed algorithm compared to the VSL and the SVRNN on the \textit{camel}-type image with $60\%$ of unobserved labels.
 \begin{figure}[htb]
     \begin{minipage}[b]{0.30\linewidth}
       \centering
       \centerline{\includegraphics[width=\textwidth, cfbox=black 1pt 0pt]{ress/cow40/cow40.png}}
     %  \vspace{2.0cm}
-      \centerline{Noisy image}\medskip
+      \centerline{(a) $\x_T$}\medskip
     \end{minipage}
     \hfill
     \begin{minipage}[b]{.30\linewidth}
       \centering
       \centerline{\includegraphics[width=\textwidth, cfbox=black 1pt 0pt]{ress/cow40/cow40_label.png}}
     %  \vspace{1.5cm}
-      \centerline{100\% labeled }\medskip
+      \centerline{(b) True labels}\medskip
     \end{minipage}
     \hfill
     \begin{minipage}[b]{0.30\linewidth}
       \centering
       \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/cow40/cow40_miss.png}}
     %  \vspace{1.5cm}
-      \centerline{60\% labeled }\medskip
+      \centerline{(c) $\U$ -  40\%  }\medskip
     \end{minipage}
     \\
     \begin{minipage}[b]{0.30\linewidth}
         \centering
         \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/cow40/cow40_vsl.png}}
       %  \vspace{2.0cm}
-        \centerline{VLS (15.64\%)}\medskip      \end{minipage}
+        \centerline{(d) VLS}\medskip      \end{minipage}
       \hfill
       \begin{minipage}[b]{.30\linewidth}
         \centering
         \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/cow40/cow40_svrnn_2.png}}
       %  \vspace{1.5cm}
-        \centerline{SVRNN (16.55\%)}\medskip
+        \centerline{(e) SVRNN}\medskip
       \end{minipage}
       \hfill
       \begin{minipage}[b]{0.30\linewidth}
         \centering
         \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/cow40/cow40_tmm_3.png}}
       %  \vspace{1.5cm}
-        \centerline{mTMC (1.93\%)}\medskip
+        \centerline{(f) d-mTMC}\medskip
       \end{minipage}
     %
-    \caption{Semi-supervised image segmentation with TMC models. }
+    \caption{Semi-supervised image segmentation with d-TMC models with $40\%$ of unlabeled pixels.}
     \label{fig:res_cow40}
 \end{figure}
+
+ \begin{figure}[htb]
+    \begin{minipage}[b]{0.30\linewidth}
+      \centering
+      \centerline{\includegraphics[width=\textwidth, cfbox=black 1pt 0pt]{ress/camel60/camel60.png}}
+    %  \vspace{2.0cm}
+      \centerline{(a) $\x_T$}\medskip
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{.30\linewidth}
+      \centering
+      \centerline{\includegraphics[width=\textwidth, cfbox=black 1pt 0pt]{ress/camel60/camel60_label.png}}
+    %  \vspace{1.5cm}
+      \centerline{(b) True labels}\medskip
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.30\linewidth}
+      \centering
+      \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel60/camel60_miss.png}}
+    %  \vspace{1.5cm}
+      \centerline{(c) $\U$ - 60\%  }\medskip
+    \end{minipage}
+    \\
+    \begin{minipage}[b]{0.30\linewidth}
+        \centering
+        \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel60/camel60_vsl.png}}
+      %  \vspace{2.0cm}
+        \centerline{(d) VLS}\medskip      \end{minipage}
+      \hfill
+      \begin{minipage}[b]{.30\linewidth}
+        \centering
+        \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel60/camel60_svrnn_2.png}}
+      %  \vspace{1.5cm}
+        \centerline{(e) SVRNN}\medskip
+      \end{minipage}
+      \hfill
+      \begin{minipage}[b]{0.30\linewidth}
+        \centering
+        \centerline{\includegraphics[width=\textwidth,cfbox=black 1pt 0pt]{ress/camel60/camel60_tmm_3.png}}
+      %  \vspace{1.5cm}
+        \centerline{(f) d-mTMC}\medskip
+      \end{minipage}
+    %
+    \caption{Semi-supervised image segmentation with d-TMC models with $60\%$ of unlabeled pixels.}
+    \label{fig:res_camel60}
+\end{figure}
+
+
+
+
  
-\subsection{Discussion}
-\label{subsec:discussion}
-
-
-
-
-
+ 
+% \subsection{Discussion}
+% \label{subsec:discussion}
 
 \section{Conclusion}
 \label{sec:conclusion}
-In this paper, we have included some approaches of generatives models 
-for semi-supervised learning into a common framework.
-We have proposed  a parameter estimation algorithm for TMCs 
-based on the variational inference framework and adapted to the
-semi-supervised learning setting. 
-Our experiments have  shown that a better performance can be 
-attained with the mTMC \katy{?? and SVRNN ??models than with the VLS model.
-} 
+In this paper, we have presented a general 
+framework for semi-supervised estimation in generative
+models. In particular, by considering the TMC model, we have shown that it is possible
+to obtain a wide variety of generative models and
+to estimate them in the common framework of
+variational inference in the case where only
+a part of the observations are labelled.
+%we have included some popular generative approaches
+%for semi-supervised learning into a common framework.
+%We have proposed  a parameter estimation algorithm for a general TMC 
+%based on the variational inference framework and adapted to the
+%semi-supervised learning setting. 
+Our experiments demonstrate the effectiveness of the proposed approach in achieving state-of-the-art performance on the task of image segmentation.
 
 
 
-   
+
+
+
 % To start a new column (but not a new page) and help balance the last-page
 % column length use \vfill\pagebreak.
 % -------------------------------------------------------------------------
-\vfill
-\pagebreak
+%\vfill
+%\pagebreak
 
 
 
@@ -685,5 +945,11 @@ attained with the mTMC \katy{?? and SVRNN ??models than with the VLS model.
 % -------------------------------------------------------------------------
 \bibliographystyle{IEEEbib}
 \bibliography{strings,refs}
+
+\newpage
+\begin{align}
+   \label{eq:TMC1}
+   \p(v_t|v_{t-1}) \!= \!\p(y_t|y_{t-1}) \p(z_t|z_{t-1}) \p(x_t|t_t,z_t) \text{.}
+\end{align}
 
 \end{document}

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 23.1) (preloaded format=pdflatex 2023.4.2)  9 MAY 2023 00:22
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 23.1) (preloaded format=pdflatex 2023.4.2)  1 JUN 2023 11:02
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -382,7 +382,7 @@ Package: varwidth 2009/03/30 ver 0.92;  Variable-width minipages
 ))
 \c@example=\count300
 \c@remark=\count301
-LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 147.
+LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 141.
  (C:\Users\kmorales\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 ) (C:\Users\kmorales\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-pdftex.def
@@ -392,20 +392,20 @@ File: l3backend-pdftex.def 2023-01-16 L3 backend support: PDF output (pdfTeX)
 ) (article.aux)
 \openout1 = `article.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 147.
-LaTeX Font Info:    ... okay on input line 147.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 147.
-LaTeX Font Info:    ... okay on input line 147.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 147.
-LaTeX Font Info:    ... okay on input line 147.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 147.
-LaTeX Font Info:    ... okay on input line 147.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 147.
-LaTeX Font Info:    ... okay on input line 147.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 147.
-LaTeX Font Info:    ... okay on input line 147.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 147.
-LaTeX Font Info:    ... okay on input line 147.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 141.
+LaTeX Font Info:    ... okay on input line 141.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 141.
+LaTeX Font Info:    ... okay on input line 141.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 141.
+LaTeX Font Info:    ... okay on input line 141.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 141.
+LaTeX Font Info:    ... okay on input line 141.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 141.
+LaTeX Font Info:    ... okay on input line 141.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 141.
+LaTeX Font Info:    ... okay on input line 141.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 141.
+LaTeX Font Info:    ... okay on input line 141.
  (C:\Users\kmorales\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count303
@@ -425,11 +425,11 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 48
  (C:\Users\kmorales\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-LaTeX Font Info:    Trying to load font information for U+msa on input line 150.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 144.
  (C:\Users\kmorales\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 150.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 144.
  (C:\Users\kmorales\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
@@ -440,7 +440,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 
 Overfull \vbox (5.4559pt too high) has occurred while \output is active []
 
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 285.
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 302.
  (C:\Users\kmorales\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
@@ -453,109 +453,135 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 
 
 ]
-Overfull \hbox (3.43373pt too wide) in paragraph at lines 396--399
-\OML/cmm/m/it/10 q[]\OT1/cmr/m/n/10 (\OT1/cmr/bx/n/10 z[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[]\OMS/cmsy/m/n/10 j\OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[] \OT1/cmr/m/n/10 )  =  \OML/cmm/m/it/10 q[]\OT1/cmr/m/n/10 (\OT1/cmr/bx/n/10 z[]\OMS/cmsy/m/n/10 j\OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[] \OT1/cmr/m/n/10 )\OML/cmm/m/it/10 q[]\OT1/cmr/m/n/10 (\OT1/cmr/bx/n/10 y[]\OMS/cmsy/m/n/10 j\OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 z[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[] \OT1/cmr/m/n/10 )$
+Overfull \hbox (1.8972pt too wide) in paragraph at lines 372--379
+\OT1/ptm/m/n/10 first choose a pa-ram-e-ter-ized tran-si-tion dis-tri-bu-tion $\OML/cmm/m/it/10 p[]\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 v[]\OMS/cmsy/m/n/10 j\OML/cmm/m/it/10 v[]\OT1/cmr/m/n/10 )$
  []
 
-[2] [3]
-<ress/camel40/camel40.png, id=30, 217.81375pt x 217.81375pt>
-File: ress/camel40/camel40.png Graphic file (type png)
-<use ress/camel40/camel40.png>
-Package pdftex.def Info: ress/camel40/camel40.png  used on input line 561.
-(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/camel40/camel40_label.png, id=32, 217.81375pt x 217.81375pt>
-File: ress/camel40/camel40_label.png Graphic file (type png)
-<use ress/camel40/camel40_label.png>
-Package pdftex.def Info: ress/camel40/camel40_label.png  used on input line 568.
-(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/camel40/camel40_miss.png, id=33, 217.81375pt x 217.81375pt>
-File: ress/camel40/camel40_miss.png Graphic file (type png)
-<use ress/camel40/camel40_miss.png>
-Package pdftex.def Info: ress/camel40/camel40_miss.png  used on input line 575.
-(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/camel40/camel40_vsl.png, id=34, 217.81375pt x 217.81375pt>
-File: ress/camel40/camel40_vsl.png Graphic file (type png)
-<use ress/camel40/camel40_vsl.png>
-Package pdftex.def Info: ress/camel40/camel40_vsl.png  used on input line 582.
-(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/camel40/camel40_svrnn_2.png, id=35, 217.81375pt x 217.81375pt>
-File: ress/camel40/camel40_svrnn_2.png Graphic file (type png)
-<use ress/camel40/camel40_svrnn_2.png>
-Package pdftex.def Info: ress/camel40/camel40_svrnn_2.png  used on input line 588.
-(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/camel40/camel40_tmm_3.png, id=36, 217.81375pt x 217.81375pt>
-File: ress/camel40/camel40_tmm_3.png Graphic file (type png)
-<use ress/camel40/camel40_tmm_3.png>
-Package pdftex.def Info: ress/camel40/camel40_tmm_3.png  used on input line 595.
-(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/cow40/cow40.png, id=37, 217.81375pt x 217.81375pt>
+[2]
+Underfull \hbox (badness 1337) in paragraph at lines 414--423
+[]\OT1/ptm/m/n/10 Variational in-fer-ence con-sists in max-i-miz-ing $\OML/cmm/m/it/10 Q\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 ^^R; ^^^\OT1/cmr/m/n/10 )$
+ []
+
+
+Underfull \hbox (badness 1158) in paragraph at lines 490--499
+\OT1/ptm/m/n/10 on the reparametriza-tion trick in or-der to ob-tain a dif-
+ []
+
+
+Underfull \hbox (badness 1077) in paragraph at lines 490--499
+\OT1/ptm/m/n/10 ple se-quen-tially ac-cord-ing to the con-tin-u-ous dis-tri-bu-tion
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 490--499
+\OML/cmm/m/it/10 q\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 z[]\OMS/cmsy/m/n/10 j\OT1/cmr/bx/n/10 z[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[]\OT1/cmr/m/n/10 )$ \OT1/ptm/m/n/10 (or $\OML/cmm/m/it/10 q\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 z[]\OMS/cmsy/m/n/10 j\OT1/cmr/bx/n/10 z[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 x[]\OML/cmm/m/it/10 ; \OT1/cmr/bx/n/10 y[]\OT1/cmr/m/n/10 )$\OT1/ptm/m/n/10 ,
+ []
+
+[3]
+Overfull \hbox (4.4345pt too wide) in alignment at lines 605--609
+ [][][] []
+ []
+
+[4]
+Underfull \hbox (badness 1308) in paragraph at lines 778--784
+[]\OT1/ptm/m/n/10 The gen-er-ated im-ages are pre-sented in Fig.1[](a) and
+ []
+
+<ress/cow40/cow40.png, id=34, 217.81375pt x 217.81375pt>
 File: ress/cow40/cow40.png Graphic file (type png)
 <use ress/cow40/cow40.png>
-Package pdftex.def Info: ress/cow40/cow40.png  used on input line 609.
+Package pdftex.def Info: ress/cow40/cow40.png  used on input line 816.
 (pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/cow40/cow40_label.png, id=38, 217.81375pt x 217.81375pt>
+<ress/cow40/cow40_label.png, id=36, 217.81375pt x 217.81375pt>
 File: ress/cow40/cow40_label.png Graphic file (type png)
 <use ress/cow40/cow40_label.png>
-Package pdftex.def Info: ress/cow40/cow40_label.png  used on input line 616.
+Package pdftex.def Info: ress/cow40/cow40_label.png  used on input line 823.
 (pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/cow40/cow40_miss.png, id=39, 217.81375pt x 217.81375pt>
+<ress/cow40/cow40_miss.png, id=37, 217.81375pt x 217.81375pt>
 File: ress/cow40/cow40_miss.png Graphic file (type png)
 <use ress/cow40/cow40_miss.png>
-Package pdftex.def Info: ress/cow40/cow40_miss.png  used on input line 623.
+Package pdftex.def Info: ress/cow40/cow40_miss.png  used on input line 830.
 (pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/cow40/cow40_vsl.png, id=40, 217.81375pt x 217.81375pt>
+<ress/cow40/cow40_vsl.png, id=38, 217.81375pt x 217.81375pt>
 File: ress/cow40/cow40_vsl.png Graphic file (type png)
 <use ress/cow40/cow40_vsl.png>
-Package pdftex.def Info: ress/cow40/cow40_vsl.png  used on input line 630.
+Package pdftex.def Info: ress/cow40/cow40_vsl.png  used on input line 837.
 (pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/cow40/cow40_svrnn_2.png, id=41, 217.81375pt x 217.81375pt>
+<ress/cow40/cow40_svrnn_2.png, id=39, 217.81375pt x 217.81375pt>
 File: ress/cow40/cow40_svrnn_2.png Graphic file (type png)
 <use ress/cow40/cow40_svrnn_2.png>
-Package pdftex.def Info: ress/cow40/cow40_svrnn_2.png  used on input line 636.
+Package pdftex.def Info: ress/cow40/cow40_svrnn_2.png  used on input line 843.
 (pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
-<ress/cow40/cow40_tmm_3.png, id=42, 217.81375pt x 217.81375pt>
+<ress/cow40/cow40_tmm_3.png, id=40, 217.81375pt x 217.81375pt>
 File: ress/cow40/cow40_tmm_3.png Graphic file (type png)
 <use ress/cow40/cow40_tmm_3.png>
-Package pdftex.def Info: ress/cow40/cow40_tmm_3.png  used on input line 643.
+Package pdftex.def Info: ress/cow40/cow40_tmm_3.png  used on input line 850.
 (pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
- [4 <./ress/camel40/camel40.png> <./ress/camel40/camel40_label.png> <./ress/camel40/camel40_miss.png> <./ress/camel40/camel40_vsl.png> <./ress/camel40/camel40_svrnn_2.png> <./ress/camel40/camel40_tmm_3.png> <./ress/cow40/cow40.png> <./ress/cow40/cow40_label.png> <./ress/cow40/cow40_miss.png> <./ress/cow40/cow40_vsl.png> <./ress/cow40/cow40_svrnn_2.png> <./ress/cow40/cow40_tmm_3.png>] (article.bbl
-Underfull \hbox (badness 2012) in paragraph at lines 29--33
+<ress/camel60/camel60.png, id=41, 217.81375pt x 217.81375pt>
+File: ress/camel60/camel60.png Graphic file (type png)
+<use ress/camel60/camel60.png>
+Package pdftex.def Info: ress/camel60/camel60.png  used on input line 862.
+(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
+<ress/camel60/camel60_label.png, id=42, 217.81375pt x 217.81375pt>
+File: ress/camel60/camel60_label.png Graphic file (type png)
+<use ress/camel60/camel60_label.png>
+Package pdftex.def Info: ress/camel60/camel60_label.png  used on input line 869.
+(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
+<ress/camel60/camel60_miss.png, id=43, 217.81375pt x 217.81375pt>
+File: ress/camel60/camel60_miss.png Graphic file (type png)
+<use ress/camel60/camel60_miss.png>
+Package pdftex.def Info: ress/camel60/camel60_miss.png  used on input line 876.
+(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
+<ress/camel60/camel60_vsl.png, id=44, 217.81375pt x 217.81375pt>
+File: ress/camel60/camel60_vsl.png Graphic file (type png)
+<use ress/camel60/camel60_vsl.png>
+Package pdftex.def Info: ress/camel60/camel60_vsl.png  used on input line 883.
+(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
+<ress/camel60/camel60_svrnn_2.png, id=45, 217.81375pt x 217.81375pt>
+File: ress/camel60/camel60_svrnn_2.png Graphic file (type png)
+<use ress/camel60/camel60_svrnn_2.png>
+Package pdftex.def Info: ress/camel60/camel60_svrnn_2.png  used on input line 889.
+(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
+<ress/camel60/camel60_tmm_3.png, id=46, 217.81375pt x 217.81375pt>
+File: ress/camel60/camel60_tmm_3.png Graphic file (type png)
+<use ress/camel60/camel60_tmm_3.png>
+Package pdftex.def Info: ress/camel60/camel60_tmm_3.png  used on input line 896.
+(pdftex.def)             Requested size: 73.40884pt x 73.4076pt.
+(article.bbl [5]
+Underfull \hbox (badness 2012) in paragraph at lines 46--50
 \OT1/ptm/m/n/10 chains,''  in \OT1/ptm/m/it/10 In-ter-na-tional Sym-po-sium on Ap-plied
  []
 
 
-Underfull \hbox (badness 1009) in paragraph at lines 46--50
+Underfull \hbox (badness 1009) in paragraph at lines 63--67
 []\OT1/ptm/m/n/10 D. G. Tzikas, A. C. Likas, and N. P. Galat-sanos,
  []
 
 
-Underfull \hbox (badness 2213) in paragraph at lines 58--62
-[]\OT1/ptm/m/n/10 Chris J Mad-di-son, An-driy Mnih, and Yee Whye
- []
-
-
-Underfull \hbox (badness 2205) in paragraph at lines 76--80
+Underfull \hbox (badness 2205) in paragraph at lines 86--90
 []\OT1/ptm/m/n/10 LEMS-Computer Vi-sion Group,  ``Bi-nary shape,''
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 76--80
+Underfull \hbox (badness 10000) in paragraph at lines 86--90
 \OT1/ptm/m/it/10 https://vision.lems.brown.edu/content/available-
  []
 
-) [5] (article.aux) ) 
+) [6 <./ress/cow40/cow40.png> <./ress/cow40/cow40_label.png> <./ress/cow40/cow40_miss.png> <./ress/cow40/cow40_vsl.png> <./ress/cow40/cow40_svrnn_2.png> <./ress/cow40/cow40_tmm_3.png> <./ress/camel60/camel60.png> <./ress/camel60/camel60_label.png> <./ress/camel60/camel60_miss.png> <./ress/camel60/camel60_vsl.png> <./ress/camel60/camel60_svrnn_2.png> <./ress/camel60/camel60_tmm_3.png>] [7
+
+] (article.aux) ) 
 Here is how much of TeX's memory you used:
- 14676 strings out of 476334
- 303657 string characters out of 5786556
- 1877382 words of memory out of 5000000
- 34797 multiletter control sequences out of 15000+600000
+ 14573 strings out of 476334
+ 301137 string characters out of 5786556
+ 1878382 words of memory out of 5000000
+ 34694 multiletter control sequences out of 15000+600000
  536553 words of font info for 83 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 99i,12n,94p,522b,960s stack positions out of 10000i,1000n,20000p,200000b,200000s
-{C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}<C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi5.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy5.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on article.pdf (5 pages, 507690 bytes).
+ 99i,12n,94p,699b,384s stack positions out of 10000i,1000n,20000p,200000b,200000s
+{C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}<C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi5.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr5.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy5.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/kmorales/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
+Output written on article.pdf (7 pages, 572122 bytes).
 PDF statistics:
- 127 PDF objects out of 1000 (max. 8388607)
+ 140 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  73 words of extra memory for PDF output out of 10000 (max. 10000000)
 
