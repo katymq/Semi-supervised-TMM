@@ -177,7 +177,7 @@ with open(os.path.join(general_path,f'model_config_{data}.ini'), 'w') as model_c
     model_config.write(model_configfile)
 
 
-loss = run_model_seq(x, y,model,optimizer,clip, path_save, n_epochs,save_every, print_every)
+loss = run_model_seq(x, y, model, device,optimizer,clip, path_save, n_epochs,save_every, print_every, epoch_init)
 plt.plot(loss)
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
