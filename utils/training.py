@@ -22,7 +22,7 @@ beta = 0.1
 
 def run_save_model(model, device, name_image, setting, general_path, learning_rate, weight_decay_, clip, x, y, epoch_init, n_epochs, print_every, save_every):
     model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay= weight_decay_)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     print(f'{model.__class__.__name__ } has {num_param(model)} parameters to train \n')
     data = model.__class__.__name__.casefold()+'_'+name_image+setting
     path_save = os.path.join(general_path, data)
@@ -85,6 +85,7 @@ def run_model_seq(x, y,model,device, optimizer,clip, path_save_model, n_epochs,s
     if epoch_init < n_epochs:
         for epoch in range(epoch_init, n_epochs + 1):
             model.train()
+            optimizer.zero_grad()
             if  model.__class__.__name__.casefold() == 'vsl':
                 kld_loss_u, rec_loss_u, y_loss_l = model(x,y)
                 loss_l = y_loss_l
@@ -119,7 +120,7 @@ def run_model_seq(x, y,model,device, optimizer,clip, path_save_model, n_epochs,s
                 #torch.save(model.state_dict(), fn)
                 # print('Saved model to '+fn)
                 np.save(path_save+'train_'+str(epoch)+'.npy', train_LOSS)     
-    else:
+    if epoch_init == n_epochs:
         print('The model is already trained')
     return train_LOSS
 

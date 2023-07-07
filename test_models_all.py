@@ -32,7 +32,7 @@ print('Your actual device',device)
 #----------------------------------------------
 general_path  = os.path.join(os.getcwd(), 'Results_save_models') 
 type_image = str(input("Enter the type of image (camel or cattle): "))
-size = int(input("Enter the size of the image (128 or 256): "))
+size = 128 # int(input("Enter the size of the image (128 or 256): "))
 p = int(input("Enter the percentage of missing labels (0 to 100): "))
 #----------------------------------------------
 #! General model settings

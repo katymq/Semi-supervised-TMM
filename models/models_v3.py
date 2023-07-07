@@ -15,7 +15,7 @@ from torch.autograd import Variable
 
 EPS = torch.finfo(torch.float).eps 
 c = - 0.5 * math.log(2*math.pi)
-p = 0.1 #dropout probability
+p = 0.5 #dropout probability
 
 class SVRNN(nn.Module):
     '''
@@ -28,7 +28,7 @@ class SVRNN(nn.Module):
         num_neurons: number of neurons in the hidden layer
 
     '''
-    def __init__(self, x_dim, z_dim, h_dim, y_dim, num_neurons, device, add_loss=True, bias = False):
+    def __init__(self, x_dim, z_dim, y_dim, h_dim, num_neurons, device, add_loss=True, bias = False):
         super(SVRNN, self).__init__()
         self.x_dim = x_dim
         self.z_dim = z_dim
@@ -37,58 +37,59 @@ class SVRNN(nn.Module):
         self.y_dim = y_dim
         self.add_loss = add_loss
         self.num_neurons = num_neurons
+        self.bias = bias
         self.Soft_threshold = nn.Sigmoid()
         self.dropout = nn.Dropout(p)
         # Prior p(z_t | y_t, h_{t-1}) = N (μt, σt)
-        self.prior_z = nn.Sequential( nn.Linear(self.h_dim + self.y_dim, self.num_neurons),
+        self.prior_z = nn.Sequential( nn.Linear(self.h_dim + self.y_dim, self.num_neurons, bias=self.bias),
                                   nn.ReLU())
-        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
-        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim, bias=self.bias)
+        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim, bias=self.bias), 
                                     nn.Softplus())
         # Prior p(y_t | h_{t-1}) = Cat (θt) 
         # In this case, we use a linear layer to predict the logits of the categorical distribution
         # We will use the sigmoid function to ensure that the logits are positive and only two classes
         # it means a Bernoulli distribution.
-        self.prior_y = nn.Sequential( nn.Linear(self.h_dim, self.num_neurons ),
+        self.prior_y = nn.Sequential( nn.Linear(self.h_dim, self.num_neurons , bias=self.bias),
                                 nn.ReLU())
-        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim),
+        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim , bias=self.bias),
                                       nn.Sigmoid())
         # q(y_t | x_t, h_{t-1}) = Cat (θt)
-        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons),
+        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons , bias=self.bias),
                                 nn.ReLU())
-        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim),
+        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim , bias=self.bias),
                                       nn.Sigmoid())
         # Encoder
         # q(z_t | x_t, y_t, h_{t-1}) = N (μt, σt)
-        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons),
+        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons , bias=self.bias),
                                 nn.ReLU())
         
-        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim)
-        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim , bias=self.bias)
+        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim , bias=self.bias), 
                                     nn.Softplus())
         # Decoder
         # p(x_t | z_t, y_t, h_{t-1}) = N (μt, σt)
-        self.dec = nn.Sequential( nn.Linear(self.h_dim + self.z_dim + self.y_dim, self.num_neurons),
+        self.dec = nn.Sequential( nn.Linear(self.h_dim + self.z_dim + self.y_dim, self.num_neurons , bias=self.bias),
                                 nn.ReLU())
-        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim)
-        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim), 
+        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim  , bias=self.bias)
+        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim , bias=self.bias), 
                                     nn.Softplus())
         # Recurrence
         # Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
         # h_t = RNN(x_t, y_t, z_t, h_{t-1})
-        self.rnn = nn.RNNCell( self.x_dim + self.z_dim + self.y_dim, self.h_dim, bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
+        self.rnn = nn.RNNCell( self.x_dim + self.z_dim + self.y_dim, self.h_dim , bias=self.bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
 
 
     def encoder(self, x, y, h):
         enc = self.enc(torch.cat([x, y, h], 0))
-        enc = self.dropout(enc) #! new
+        # enc = self.dropout(enc) #! new
         enc_mean = self.enc_mean(enc)
         enc_std = self.enc_std(enc)
         return enc_mean, enc_std
     
     def decoder(self, z, y, h):
         dec = self.dec(torch.cat([z, y, h], 0))
-        dec = self.dropout(dec) #! new
+        # dec = self.dropout(dec) #! new
         dec_mean = self.dec_mean(dec)
         dec_std = self.dec_std(dec)
         return dec_mean, dec_std
@@ -96,7 +97,7 @@ class SVRNN(nn.Module):
     def get_cost_labeled(self, x, y, h):
         # Prior p(z_t | y_t, h_{t-1})
         prior_zt = self.prior_z(torch.cat([y, h], 0))
-        prior_zt = self.dropout(prior_zt) #!new
+        # prior_zt = self.dropout(prior_zt) #!new
         prior_zt_mean = self.prior_z_mean(prior_zt)
         prior_zt_std = self.prior_z_std(prior_zt)
         # Encoder q(z_t | x_t, y_t, h_{t-1})
@@ -172,6 +173,7 @@ class SVRNN(nn.Module):
             # weight.normal_(0, stdv)
             # weight.data.normal_(0, stdv)
             nn.init.kaiming_normal_(weight)
+
     def _reparameterized_sample(self, mean, std):
         """using std to sample"""
         eps = torch.FloatTensor(std.size()).normal_().to(self.device)
@@ -230,47 +232,48 @@ class VSL(nn.Module):
         self.num_neurons = num_neurons
         self.h_dim = h_dim
         self.add_loss = add_loss
+        self.bias = bias
         self.Soft_threshold = nn.Sigmoid()
         self.dropout = nn.Dropout(p)
         # Prior p(z_t | h_{t-1}) = N (μt, σt)
-        self.prior_z = nn.Sequential( nn.Linear(self.h_dim, self.num_neurons),
+        self.prior_z = nn.Sequential( nn.Linear(self.h_dim, self.num_neurons , bias=self.bias),
                                   nn.ReLU())
-        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
-        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim , bias=self.bias)
+        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim , bias=self.bias), 
                                     nn.Softplus())
         # Prior f(y_t | z_{t}) 
-        self.class_y = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons ),
+        self.class_y = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons  , bias=self.bias),
                                 nn.ReLU(),
-                                nn.Linear(self.num_neurons, self.y_dim),
+                                nn.Linear(self.num_neurons, self.y_dim , bias=self.bias),
                                 nn.Sigmoid()
                                 )
         # Encoder
         # q(z_t |x_T) = N (μt, σt)
-        self.enc = nn.Sequential(nn.Linear(self.x_dim + self.h_dim , self.num_neurons),
+        self.enc = nn.Sequential(nn.Linear(self.x_dim + self.h_dim , self.num_neurons , bias=self.bias),
                                 nn.ReLU())
-        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim)
-        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim , bias=self.bias)
+        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim , bias=self.bias), 
                                     nn.Softplus())
         # Decoder
         # p(x_t |z_t) = N (μt, σt)
-        self.dec = nn.Sequential(nn.Linear(self.z_dim , self.num_neurons),
+        self.dec = nn.Sequential(nn.Linear(self.z_dim , self.num_neurons , bias=self.bias),
                                 nn.ReLU())
-        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim)
-        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim), 
+        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim , bias=self.bias)
+        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim , bias=self.bias), 
                                     nn.Softplus())
-        self.rnn = nn.RNNCell( self.x_dim , self.h_dim, bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
+        self.rnn = nn.RNNCell( self.x_dim , self.h_dim , bias=self.bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
 
 
     def encoder(self,x,h):
         enc = self.enc(torch.cat([x, h], 0))
-        enc = self.dropout(enc) #! new
+        # enc = self.dropout(enc) #! new
         enc_mean = self.enc_mean(enc)
         enc_std = self.enc_std(enc)
         return enc_mean, enc_std
     
     def decoder(self, z):
         dec = self.dec(z)
-        dec = self.dropout(dec) #! new
+        # dec = self.dropout(dec) #! new
         dec_mean = self.dec_mean(dec)
         dec_std = self.dec_std(dec)
         return dec_mean, dec_std
@@ -299,7 +302,7 @@ class VSL(nn.Module):
             enc_mean, enc_std = self.encoder(x[t], h_t)
             z_t = self._reparameterized_sample(enc_mean, enc_std)
             prior_zt = self.prior_z(h_t)
-            prior_zt = self.dropout(prior_zt) #!new
+            # prior_zt = self.dropout(prior_zt) #!new
             prior_zt_mean = self.prior_z_mean(prior_zt)
             prior_zt_std = self.prior_z_std(prior_zt)
             dec_mean, dec_std = self.decoder(z_t)
@@ -366,55 +369,56 @@ class TMM(nn.Module):
         self.y_dim = y_dim
         self.h_dim = h_dim
         self.add_loss = add_loss
+        self.bias = bias
         self.num_neurons = num_neurons
         self.Soft_threshold = nn.Sigmoid()
         self.dropout = nn.Dropout(p)
         # Prior p(z_t | z_{t-1}) = N (μt, σt)
-        self.prior_z = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons),
+        self.prior_z = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons , bias=self.bias),
                                   nn.ReLU())
-        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
+        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim , bias=self.bias)
         
-        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim , bias=self.bias), 
                                          nn.Softplus())
         # Prior p(y_t | y_{t-1}) = Cat (θt) 
         # We will use the sigmoid function to ensure that the logits are positive and only two classes(if not we can use the softmax function)
-        self.prior_y = nn.Sequential( nn.Linear(self.y_dim, self.num_neurons ), 
+        self.prior_y = nn.Sequential( nn.Linear(self.y_dim, self.num_neurons  , bias=self.bias), 
                                      nn.ReLU())
-        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim), 
+        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim  , bias=self.bias), 
                                            nn.Sigmoid())
         # q(y_t | x_t, h_{t-1}) = Cat (θt)
-        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons), 
+        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons , bias=self.bias), 
                                  nn.ReLU())
-        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim), 
+        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim , bias=self.bias), 
                                        nn.Sigmoid())
         # Encoder
         # q(z_t | x_t, y_t, h_{t-1}) = N (μt, σt)
-        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons), 
+        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons , bias=self.bias), 
                                  nn.ReLU())
         
-        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim)
-        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim , bias=self.bias)
+        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim , bias=self.bias), 
                                      nn.Softplus())
         # Decoder
         # p(x_t |z_t, y_t) = N (μt, σt)
-        self.dec = nn.Sequential( nn.Linear(self.y_dim + self.z_dim , self.num_neurons),
+        self.dec = nn.Sequential( nn.Linear(self.y_dim + self.z_dim , self.num_neurons , bias=self.bias),
                                   nn.ReLU())
-        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim)
-        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim),  
+        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim , bias=self.bias)
+        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim , bias=self.bias),  
                                      nn.Softplus())
         # Recurrence
-        self.rnn = nn.RNNCell( self.x_dim + self.z_dim + self.y_dim, self.h_dim, bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
+        self.rnn = nn.RNNCell( self.x_dim + self.z_dim + self.y_dim, self.h_dim , bias=self.bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
 
     def encoder(self, x, y, h):
         enc = self.enc(torch.cat([x, y,h], 0))
-        enc = self.dropout(enc) #! new
+        # enc = self.dropout(enc) #! new
         enc_mean = self.enc_mean(enc)
         enc_std = self.enc_std(enc)
         return enc_mean, enc_std
     
     def decoder(self, z, y):
         dec = self.dec(torch.cat([z, y], 0))
-        dec = self.dropout(dec) #! new
+        # dec = self.dropout(dec) #! new
         dec_mean = self.dec_mean(dec)
         dec_std = self.dec_std(dec)
         return dec_mean, dec_std
@@ -422,7 +426,7 @@ class TMM(nn.Module):
     def get_cost_labeled(self, x, y, h, zt):
         # zt : z_{t-1}
         prior_zt = self.prior_z(zt)
-        prior_zt = self.dropout(prior_zt) #!new
+        # prior_zt = self.dropout(prior_zt) #!new
         prior_zt_mean = self.prior_z_mean(prior_zt)
         prior_zt_std = self.prior_z_std(prior_zt)
         # Encoder 
@@ -546,55 +550,56 @@ class TMM_1(nn.Module):
         self.y_dim = y_dim
         self.h_dim = h_dim
         self.add_loss = add_loss
+        self.bias = bias
         self.num_neurons = num_neurons
         self.Soft_threshold = nn.Sigmoid()
         self.dropout = nn.Dropout(p)
         # Prior p(z_t | z_{t-1}) = N (μt, σt)
-        self.prior_z = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons),
+        self.prior_z = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons, bias=self.bias),
                                   nn.ReLU())
-        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
+        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim, bias=self.bias)
         
-        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim, bias=self.bias), 
                                          nn.Softplus())
         # Prior p(y_t | y_{t-1}) = Cat (θt) 
         # We will use the sigmoid function to ensure that the logits are positive and only two classes(if not we can use the softmax function)
-        self.prior_y = nn.Sequential( nn.Linear(self.y_dim + self.x_dim, self.num_neurons ), 
+        self.prior_y = nn.Sequential( nn.Linear(self.y_dim + self.x_dim, self.num_neurons , bias=self.bias), 
                                      nn.ReLU())
-        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim), 
+        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim, bias=self.bias), 
                                            nn.Sigmoid())
         # q(y_t | x_t, h_{t-1}) = Cat (θt)
-        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons), 
+        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons, bias=self.bias), 
                                  nn.ReLU())
-        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim), 
+        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim, bias=self.bias), 
                                        nn.Sigmoid())
         # Encoder
         # q(z_t | x_t, y_t, h_{t-1}) = N (μt, σt)
-        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons), 
+        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons, bias=self.bias), 
                                  nn.ReLU())
         
-        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim)
-        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim, bias=self.bias)
+        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim, bias=self.bias), 
                                      nn.Softplus())
         # Decoder
         # p(x_t |z_t, y_t) = N (μt, σt)
-        self.dec = nn.Sequential( nn.Linear(self.y_dim + self.z_dim , self.num_neurons),
+        self.dec = nn.Sequential( nn.Linear(self.y_dim + self.z_dim , self.num_neurons, bias=self.bias),
                                   nn.ReLU())
-        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim)
-        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim),  
+        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim, bias=self.bias)
+        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim, bias=self.bias),  
                                      nn.Softplus())
         # Recurrence
         self.rnn = nn.RNNCell( self.x_dim + self.z_dim + self.y_dim, self.h_dim, bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
 
     def encoder(self, x, y, h):
         enc = self.enc(torch.cat([x, y,h], 0))
-        enc = self.dropout(enc) #! new
+        # enc = self.dropout(enc) #! new
         enc_mean = self.enc_mean(enc)
         enc_std = self.enc_std(enc)
         return enc_mean, enc_std
     
     def decoder(self, z, y):
         dec = self.dec(torch.cat([z, y], 0))
-        dec = self.dropout(dec) #! new
+        # dec = self.dropout(dec) #! new
         dec_mean = self.dec_mean(dec)
         dec_std = self.dec_std(dec)
         return dec_mean, dec_std
@@ -602,7 +607,7 @@ class TMM_1(nn.Module):
     def get_cost_labeled(self, x, y, h, zt):
         # zt : z_{t-1}
         prior_zt = self.prior_z(zt)
-        prior_zt = self.dropout(prior_zt) #!new
+        # prior_zt = self.dropout(prior_zt) #!new
         prior_zt_mean = self.prior_z_mean(prior_zt)
         prior_zt_std = self.prior_z_std(prior_zt)
         # Encoder 
@@ -732,55 +737,56 @@ class TMM_2(nn.Module):
         self.y_dim = y_dim
         self.h_dim = h_dim
         self.add_loss = add_loss
+        self.bias = bias
         self.num_neurons = num_neurons
         self.Soft_threshold = nn.Sigmoid()
         self.dropout = nn.Dropout(p)
         # Prior p(z_t | z_{t-1}) = N (μt, σt)
-        self.prior_z = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons),
+        self.prior_z = nn.Sequential( nn.Linear(self.z_dim, self.num_neurons, bias=self.bias),
                                   nn.ReLU())
-        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim)
+        self.prior_z_mean = nn.Linear(self.num_neurons, self.z_dim, bias=self.bias)
         
-        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.prior_z_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim, bias=self.bias), 
                                          nn.Softplus())
         # Prior p(y_t | y_{t-1}) = Cat (θt) 
         # We will use the sigmoid function to ensure that the logits are positive and only two classes(if not we can use the softmax function)
-        self.prior_y = nn.Sequential( nn.Linear(self.y_dim + self.x_dim, self.num_neurons ), 
+        self.prior_y = nn.Sequential( nn.Linear(self.y_dim + self.x_dim, self.num_neurons, bias=self.bias ), 
                                      nn.ReLU())
-        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim), 
+        self.prior_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim, bias=self.bias), 
                                            nn.Sigmoid())
         # q(y_t | x_t, h_{t-1}) = Cat (θt)
-        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons), 
+        self.q_y = nn.Sequential( nn.Linear(self.x_dim + self.h_dim, self.num_neurons, bias=self.bias), 
                                  nn.ReLU())
-        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim), 
+        self.q_y_proba = nn.Sequential(nn.Linear(self.num_neurons, self.y_dim, bias=self.bias), 
                                        nn.Sigmoid())
         # Encoder
         # q(z_t | x_t, y_t, h_{t-1}) = N (μt, σt)
-        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons), 
+        self.enc = nn.Sequential( nn.Linear(self.h_dim + self.x_dim + self.y_dim, self.num_neurons, bias=self.bias), 
                                  nn.ReLU())
         
-        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim)
-        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim), 
+        self.enc_mean = nn.Linear(self.num_neurons, self.z_dim, bias=self.bias)
+        self.enc_std = nn.Sequential( nn.Linear (self.num_neurons, self.z_dim, bias=self.bias), 
                                      nn.Softplus())
         # Decoder
         # p(x_t |z_t, y_t) = N (μt, σt)
-        self.dec = nn.Sequential( nn.Linear(self.y_dim + self.z_dim  +self.x_dim, self.num_neurons),
+        self.dec = nn.Sequential( nn.Linear(self.y_dim + self.z_dim  +self.x_dim, self.num_neurons, bias=self.bias),
                                   nn.ReLU())
-        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim)
-        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim),  
+        self.dec_mean = nn.Linear(self.num_neurons, self.x_dim, bias=self.bias)
+        self.dec_std = nn.Sequential( nn.Linear (self.num_neurons, self.x_dim, bias=self.bias),  
                                      nn.Softplus())
         # Recurrence
         self.rnn = nn.RNNCell( self.x_dim + self.z_dim + self.y_dim, self.h_dim, bias, nonlinearity='tanh')#nn.GRU( h_dim + x_dim + z_dim + y_dim , h_dim, n_layers)
 
     def encoder(self, x, y, h):
         enc = self.enc(torch.cat([x, y,h], 0))
-        enc = self.dropout(enc) #! new
+        # enc = self.dropout(enc) #! new
         enc_mean = self.enc_mean(enc)
         enc_std = self.enc_std(enc)
         return enc_mean, enc_std
     
     def decoder(self, x, z, y):
         dec = self.dec(torch.cat([x, z, y], 0))
-        dec = self.dropout(dec) #! new
+        # dec = self.dropout(dec) #! new
         dec_mean = self.dec_mean(dec)
         dec_std = self.dec_std(dec)
         return dec_mean, dec_std
@@ -789,7 +795,7 @@ class TMM_2(nn.Module):
         # zt : z_{t-1}
         # xt : x_{t-1}
         prior_zt = self.prior_z(zt)
-        prior_zt = self.dropout(prior_zt) #!new
+        # prior_zt = self.dropout(prior_zt) #!new
         prior_zt_mean = self.prior_z_mean(prior_zt)
         prior_zt_std = self.prior_z_std(prior_zt)
         # Encoder 

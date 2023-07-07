@@ -133,16 +133,29 @@ if setting == '-1':
 
 model1 = TMM(x_dim, z_dim, y_dim, h_dim, neurons_tmm, device, bool(add_loss))
 model2 = VSL( x_dim, z_dim, y_dim, h_dim, neurons_vsl, device)
-model3 = SVRNN(x_dim, z_dim, h_dim, y_dim, neurons_svrnn, device, bool(add_loss))
+model3 = SVRNN(x_dim, z_dim, y_dim, h_dim, neurons_svrnn, device, bool(add_loss))
 
 model4 = TMM_1(x_dim, z_dim, y_dim, h_dim, neurons_tmm, device, bool(add_loss))
 model5 = TMM_2( x_dim, z_dim, y_dim, h_dim, neurons_tmm-1, device,bool(add_loss))
 
 all_models = input("Enter 'True' if all models should be trained, or 'False' otherwise: ").lower() == 'true'
+list_all_models = [model1, model2, model3, model4, model5]
 if all_models:
-    list_models = [model1, model2, model3, model4, model5]
+    list_models = list(list_all_models)
 else:
-    list_models = [model4, model5]
+    # Empty list to store selected models
+    list_models = []
+
+    # Prompt the user for model selection
+    for i, option in enumerate(list_all_models, 1):
+        response = input(f"Enter 'Y' if you want to train {option.__class__.__name__}, or 'N' otherwise: ")
+        if response.upper() == 'Y':
+            list_models.append(option)
+
+    # Print the selected models
+    print("Selected models:")
+    for model in list_models:
+        print(model.__class__.__name__)
 #----------------------------------------------
 # Path to save the model
 path_data = os.path.join(path, folder_data, type_image+'_'+str(size))

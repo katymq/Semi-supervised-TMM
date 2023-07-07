@@ -108,10 +108,17 @@ def test_model(model, device, name_image, setting, general_path, image_x, image_
         plt.savefig(os.path.join(path_save,f'{name_image}_pred_{model.__class__.__name__}.png'),transparent=True,format='png', bbox_inches='tight', pad_inches=0)
         plt.close()
         print('Images saved.')
-        shutil.move(path_save, os.path.join(os.path.dirname(general_path), r'Results_outputs\v3_128_junio'))
         print('Folder moved.')
+
+        if os.path.exists(os.path.join(os.path.dirname(general_path), r'Results_outputs\v3_128_junio', data)):
+            print("Destination folder already exists in the new path!")
+            # Delete the existing folder in the source path
+            shutil.rmtree(os.path.join(os.path.dirname(general_path), r'Results_outputs\v3_128_junio', data))
+        shutil.move(path_save, os.path.join(os.path.dirname(general_path), r'Results_outputs\v3_128_junio'))
+        print("Folder moved successfully!")
+
     else:
-        print("The model doesn't exist in this path", path_save)
+        print("The model doesn't exist in this path")
         error_rate = None
     return error_rate
     
